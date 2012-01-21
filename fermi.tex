@@ -1,0 +1,215 @@
+\documentclass{bioinfo}
+\copyrightyear{2012}
+\pubyear{2012}
+
+\usepackage{natbib}
+\bibliographystyle{apalike}
+
+\DeclareMathOperator*{\argmax}{argmax}
+
+\begin{document}
+\firstpage{1}
+
+\title[Variant calling with de novo assembly]{Improving single-sample SNPs and INDELs calling with
+whole-genome de novo assembly}
+
+\author[Li]{Heng Li$^{1,}$\footnote{to whom correspondence should be addressed}}
+
+\address{$^1$Broad Institute, 7 Cambridge Center, Cambridge, MA 02142, USA}
+
+\history{Received on XXXXX; revised on XXXXX; accepted on XXXXX}
+\editor{Associate Editor: XXXXXXX}
+\maketitle
+
+\begin{abstract}
+
+\section{Motivation:}
+Eugene Myers in his string graph paper~\citep{Myers:2005bh} suggested that in a
+string graph or equivalently a unitig graph, any path spells a valid assembly.
+As a string/unitig graph also encodes every valid assembly of reads, such a
+graph, provided that it can be constructed correctly, is in fact a lossless
+representation of reads. In principle, every analysis based on whole-genome
+shotgun sequencing (WGS) data, such as SNP and insertion/deletion (INDEL)
+calling, can also be achieved with unitigs.
+
+\section{Results:}
+To explore the feasibility of using de novo assembly in the context of
+resequencing, we developed a de novo assembler, \emph{fermi}, that assembles
+Illumina short reads into unitigs while preserving most of information of the
+input reads. SNPs and INDELs can be called by mapping the unitigs against a
+reference genome. By applying the method on 35-fold human resequencing data,
+we showed that in comparison to the standard pipeline, our approach yields
+similar accuracy for SNP calling and better results for INDEL calling. It has
+higher sensitivity than other de novo assembly based methods for variant
+calling. Our work suggests that variant calling with de novo assembly be a
+beneficial complement to the standard variant calling pipeline for whole-genome
+resequencing.
+
+\section{Availability:} http://github.com/lh3/fermi
+\section{Contact:} hengli@broadinstitute.org
+\end{abstract}
+
+\section{INTRODUCTION}
+
+The rapidly decreasing sequencing cost has enabled whole-genome shotgun (WGS)
+resequencing at an affordable price. Many software packages have been developed
+to call variants, including SNPs, short insertions and deletions (INDELs) and
+structural variations (SVs), from WGS data. At present, the standard approach to
+variant calling is to map raw sequence reads against a reference genome and then
+to detect differences from the reference. It is well established and has been
+proved to work from a single sample to thousands of
+samples~\citep{1000-Genomes-Project-Consortium:2010qc}. Nonetheless, a
+fundamental flaw in this mapping based approach is that mapping algorithms
+ignore the correlation between sequence reads. They are unable to take full
+advantage of data and may produce inconsistent outputs which complicate variant
+calling.  This flaw has gradually attracted the attention of various research
+groups who subsequently proposed several methods to alleviate the effect,
+including post alignment
+filtering~\citep{Li:2008zr,Ossowski:2008if,Krawitz:2010zr}, iterative
+mapping~\citep{Manske:2009ve}, read
+realignment~\citep{Albers:2010ud,Homer:2010kx,Li:2011kx,Depristo:2011vn} and
+local assembly~\citep{Carnevali:2011fk}.  However, because these methods still
+rely on the initial mapping, it is difficult for them to identify and recover
+mismapped or unmapped reads due to high sequence divergence, long INDELs, SVs,
+copy number changes or misassemblies. They have not solved the problem from the
+root.
+
+Another approach to variant calling that fundamentally avoids the flaw of the
+mapping based approach is to assemble sequence reads into contigs and to
+discover variants via assembly-to-assemby alignment. It was probably more
+widely used in the era of capillary sequencing. The assembly based method
+became less used since 2008 due to the great difficulties in assembling 25bp
+reads, but with longer paired-end reads and improved methodology,
+de novo assembly is reborn as the preferred choice for variant discovery
+between small genomes.
+
+For variant discovery between human genomes, however, the assembly based
+approach has not attracted much attention. Assembling a human genome is far
+more difficult than assembling a bacterial genome, firstly due to the sheer
+size of the genome, secondly to the rich repeats and thirdly due to the
+diploidy of the human genome. Many heuristics effective for assembling small
+genomes are not directly applicable to the human genome assembly. As a result,
+only a few de novo assemblers have been applied on human short-read data. Among
+them, ABySS~\citep{Simpson:2009ys}, SOAPdenovo~\citep{Li:2010vn} and
+SGA~\citep{Simpson:2011ly}, as of now, do not explicitly output heterozygotes.
+Although in theory it is possible to recover heterozygotes from their
+intermediate output, it may be difficult in practice as the assemblers may not
+distinguish heterozygotes from sequencing errors. Cortex~\citep{Iqbal:2012ys}
+is specifically designed for retaining heterozygous variants in an assembly,
+but it may be missing heterozygotes. ALLPATHS-LG~\citep{Gnerre:2011ys}
+also paid particular attention to keep heterozygotes, but it still has
+relatively a low sensitivity to them. In addition, ALLPATHS-LG only works with
+reads from libraries with distinct insert size distributions and prefers read
+pairs with mean insert size below three times of the read length, while many
+resequencing projects do not meet these requirements and thus ALLPATHS-LG may
+not be applied or work to the best performance. Even if we also include de novo
+assemblers developed for capillary sequence reads, the version of the Celera
+assembler used for assembling the HuRef genome~\citep{Levy:2007uq} is the only
+one that retains heterozygotes. At last, one may think to map sequence reads
+back to the assembled contigs to recover heterozygous events, but this
+procedure will be affected by the same flaw of read mapping. To the best of our
+knowledge, no existing de novo assemblers are able to achieve the sensitivity
+of the standard mapping based approach.
+
+In this article, we will show the first time that the assembly based variant
+calling can achieve a SNP accuracy close to the standard mapping approach
+and have particular strength in INDEL calling, confirming previous
+studies~\citep{Iqbal:2012ys}. In addition, the de novo assembly
+algorithm, \emph{fermi}, developed for this practice is also a capable
+assembler for human assembly.
+
+\begin{methods}
+\section{METHODS}
+\subsection{Theoretical background}
+\subsubsection{A history of the overlap-layout-consensus paradigm}
+Computer assisted sequence assembly can be dated back to the late
+1970s~\citep{Staden:1979dq,Gingeras:1979cr}. 
+In 1984, \citeauthor{Peltola:1984qf} first formulated the DNA assembling
+problem as finding the shortest string (the assembly) such that each sequence
+read can be mapped to the assembly within a required error rate.
+To solve the problem, they proposed a three-step procedure, which is
+essentially the overlap-layout-consensus (OLC) approach.
+
+\citet{Myers:1995nx} pointed out that reducing DNA assembly to a shortest
+string problem is flawed in the presence of repeat. He (see also
+\citealt{DBLP:journals/algorithmica/KececiogluM95}) further proposed the
+concept of \emph{overlap graph}, where a vertex corresponds to a read and a
+bidirectional edge to an overlap. Naively, the DNA assembling
+problem can be cast as finding a path in the overlap graph such that
+each vertex/read is visited exactly once (though edge/overlap caused by
+repeats are not required to be traversed), equivalent to a Hamilton path
+problem which is known to be NP-complete. This has led many to believe that the
+OLC approach is theoretically crippled.
+
+However, this is a misbelief. Although the assembly problem can be reduced
+to a Hamilton path problem, it can be reduced to other problems as well and
+in practice almost no assemblers try to solve a Hamilton path problem.
+We note that a fundamental difference between a generic
+graph and an overlap graph is that the latter can be transitively
+reduced while retaining the read relationship. More formally,
+if $v_1\to v_2$, $v_2\to v_3$ and $v_1\to v_3$ are all present,
+edge $v_1\to v_3$ is said to be \emph{reducible}. When we removed all the
+reducible edges, a procedure called \emph{transitive reduction}, the resulting graph
+is still a loyal representation of the overlap graph~\citep{Myers:1995nx}, but
+the path corresponding to the assembly is not a Hamilton path any more because
+reads from repetitive regions need to be traversed multiple times.
+
+In a transitively reduced graph, if there exists $v_1\to v_2$ with the
+out-degree of $v_1$ and in-degree of $v_2$ both equal to 1, we are able
+to merge $v_1$ and $v_2$ into one vertex without altering the topology of the
+graph. After we performed all possible merges, we get a \emph{unitig graph} in
+which each vertex corresponds to a \emph{unitig}, representing a maximal
+sequence that can be resolved by reads. Multiple copies of a repeat may
+be collapsed to a single unitig. Unitig plays a central role in the Celera
+assembler~\citep{Myers:2000kl}.
+
+The concept of unitig helps to greatly simplify an assembly graph, but it does
+not theoretically solve the sequence assembly to the end. \citet{Myers:2005bh},
+based on the suggestion by~\citet{Pevzner:2001vn}, proposed to compute a
+traversal count for each edge and to remove false overlap edges by solving a
+minimum cost network flow problem. Finding the optimal assembly in the resultant
+graph can be reduced to a Eulerian path problem, which has a linear time
+solution. Myers originally applied this procedure to \emph{string graph},
+an equivalence to unitig graph. \citet{Medvedev:2009ve} pointed out
+that determining the traversal count can also be resolved directly in the
+bidirectional unitig graph using a bidirected network flow-based algorithm.
+
+Once we get a transitively reduced graph, the following steps can be achieved
+in roughly linear time most of time -- the worst case almost never happens
+globally in practice. However, deriving an overlap graph takes $O(N^2)$ time,
+where $N$ is the number of reads, and transitive reduction takes at least
+$O(E)$ time, where $E$ is the number of edges which is usually much larger than
+$N$. This still makes an OLC based approach less favorable in short-read
+assembly where $N$ can be of the order of $10^9$.
+
+A breakthrough achieved by~\citet{Simpson:2010uq,Simpson:2011ly} finally solved
+this last remaining problem at least when we only consider exact overlaps.
+These authors developed a $O(N)$ algorithm to find all the irreducible edges,
+effectively replacing the overlapping and transitive reduction phases.
+
+In summary, in the OLC paradigm, the sequence assembly problem can be
+practically solved in a time roughly linear in the total length of reads.
+
+\subsubsection{De Bruijn graph and read coherence}
+De Bruijn graph is an alternative graph representation of sequence
+reads~\citep{Idury:1995oq}.  It can be trivially constructed with a simple
+linear-time algorithm. This makes the de Bruijn graph approach very attractive
+for assembling many short reads.
+
+However, de Bruijn is `lossy'. From a theoretical point view, a de Bruijn graph
+is equivalent to a transitively reduced overlap graph built by splitting a long
+read into $k$-mer reads and requiring $(k-1)$-mer exact overlaps. Because
+long reads all effectively work as $k$-bp reads in a de Bruijn graph, longer
+range information is lost. As a result, a path in the graph may be invalidated
+by reads.
+
+\end{methods}
+
+\section{RESULTS}
+
+\section*{ACKNOWLEDGEMENTS}
+
+\paragraph{Funding\textcolon} NIH 1U01HG005208-01.
+\bibliography{fermi}
+
+\end{document}
