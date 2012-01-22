@@ -200,8 +200,22 @@ However, de Bruijn is `lossy'. From a theoretical point view, a de Bruijn graph
 is equivalent to a transitively reduced overlap graph built by splitting a long
 read into $k$-mer reads and requiring $(k-1)$-mer exact overlaps. Because
 long reads all effectively work as $k$-bp reads in a de Bruijn graph, longer
-range information is lost. As a result, a path in the graph may be invalidated
-by reads.
+range information is lost and as a result, a path in the graph may be
+invalidated by reads. In contrast, in a unitig graph or equivalently a string
+graph each path models a valid assembly from input reads. \citet{Myers:2005bh}
+called this property of path consistency as \emph{read coherence}.
+
+Losing the long-range information in reads, a de Bruijn graph by itself has
+reduced power to resolve short repeats.
+
+\subsubsection{Concluding remark}
+We noted that we only focused on the theoretical aspects of de novo assembly.
+In practice, correcting errors, utilizing read pairs and controlling memory
+usage all pose challenges to large-scale de novo assembly. Many practical
+problems are not solved perfectly. Furthermore, not many assemblers solve the
+final assembly via graph traversal~\citep{Flicek:2009kh}. They usually apply
+heuristics on the simplified graph to get the final results. De novo assembly
+is still a field under active development.
 
 \end{methods}
 
