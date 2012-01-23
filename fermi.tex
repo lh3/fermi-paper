@@ -10,7 +10,7 @@
 \begin{document}
 \firstpage{1}
 
-\title[Variant calling with de novo assembly]{Improving single-sample SNPs and INDELs calling with
+\title[Variant calling with de novo assembly]{Improving single-sample SNP and INDEL calling with
 whole-genome de novo assembly}
 
 \author[Li]{Heng Li$^{1,}$\footnote{to whom correspondence should be addressed}}
@@ -98,18 +98,19 @@ distinguish heterozygotes from sequencing errors. Cortex~\citep{Iqbal:2012ys}
 is specifically designed for retaining heterozygous variants in an assembly,
 but it may be missing heterozygotes. ALLPATHS-LG~\citep{Gnerre:2011ys}
 also paid particular attention to keep heterozygotes, but it still has
-relatively a low sensitivity to them. In addition, ALLPATHS-LG only works with
+relatively a low sensitivity. In addition, ALLPATHS-LG only works with
 reads from libraries with distinct insert size distributions and prefers read
 pairs with mean insert size below three times of the read length, while many
 resequencing projects do not meet these requirements and thus ALLPATHS-LG may
 not be applied or work to the best performance. Even if we also include de novo
 assemblers developed for capillary sequence reads, the version of the Celera
 assembler used for assembling the HuRef genome~\citep{Levy:2007uq} is the only
-one that retains heterozygotes. At last, one may think to map sequence reads
-back to the assembled contigs to recover heterozygous events, but this
+one that retains heterozygotes while capable of assembling a mammalian genome.
+At last, one may think to map sequence reads back to the assembled contigs to
+recover heterozygous events, but this
 procedure will be affected by the same flaw of read mapping. To the best of our
 knowledge, no existing de novo assemblers are able to achieve the sensitivity
-of the standard mapping based approach.
+of the standard mapping based approach for a diploid mammalian genome.
 
 In this article, we will show the first time that the assembly based variant
 calling can achieve a SNP accuracy close to the standard mapping approach
@@ -158,7 +159,7 @@ In a transitively reduced graph, if there exists $v_1\to v_2$ with the
 out-degree of $v_1$ and in-degree of $v_2$ both equal to 1, we are able
 to merge $v_1$ and $v_2$ into one vertex without altering the topology of the
 graph. After we performed all possible merges, we get a \emph{unitig graph} in
-which each vertex corresponds to a \emph{unitig}, representing a maximal
+which each vertex corresponds to a \emph{unitig}, representing a maximal linear
 sequence that can be resolved by reads. Multiple copies of a repeat may
 be collapsed to a single unitig. Unitig plays a central role in the Celera
 assembler~\citep{Myers:2000kl}.
@@ -206,20 +207,100 @@ graph each path models a valid assembly from input reads. \citet{Myers:2005bh}
 called this property of path consistency as \emph{read coherence}.
 
 Losing the long-range information in reads, a de Bruijn graph by itself has
-reduced power to resolve short repeats.
+reduced power to resolve short repeats. This flaw is usually amended by mapping
+reads back to the graph and bisecting repeats shorter than the reads, a procedure
+some called as \emph{read threading}. Many de Buijn graph based assemblers
+essentially take this
+strategy~\citep{Pevzner:2001vn,Chaisson:2009fk,Zerbino:2009ly,Li:2010vn},
+though they may use different terminologies.
+
+With read threading, it is theoretically possible to transform a de Bruijn graph
+to a coherent graph, but in practice, threading is not straightforward and
+may be inefficient given complex repeat structures. For a coherent representation
+of reads, a unitig graph is simpler to construct.
 
 \subsubsection{Concluding remark}
 We noted that we only focused on the theoretical aspects of de novo assembly.
-In practice, correcting errors, utilizing read pairs and controlling memory
+In practice, many assemblers derived the final assembly by applying heuristics
+on the simplified graph instead of solving a network flow problem or a Eulerian
+problem. Furthermore, correcting errors, utilizing read pairs and controlling memory
 usage all pose challenges to large-scale de novo assembly. Many practical
-problems are not solved perfectly. Furthermore, not many assemblers solve the
-final assembly via graph traversal~\citep{Flicek:2009kh}. They usually apply
-heuristics on the simplified graph to get the final results. De novo assembly
-is still a field under active development.
+problems are not solved perfectly. De novo assembly is still a field under
+active development.
+
+\subsection{Rationale}
 
 \end{methods}
 
 \section{RESULTS}
+
+\subsection{Implementation}
+We implemented a new de novo assembler, fermi, with a particular emphasis on
+preserving short variants. It is designed to take advantage of multiple
+processors of a machine with large shared memory.
+
+\subsection{Performance on de novo assembly}
+
+\subsection{Performance on SNP calling}
+
+\begin{table}[!htb]
+\processtable{Evaluated SNP and INDEL call sets}
+{\begin{tabular}{lllll}
+\toprule
+Label & Data & Assembler & Mapper & Caller \\
+\midrule
+AS & 96X Illumina PE$^1$ & AllPaths-LG & BWA-SW$^2$ & SAMtools$^3$ \\
+BS & 60X Illumina PE & & BWA$^4$ & SAMtools \\
+CG & Complete Genomics& & cgatools2 & cgatools2 \\
+CV & 26X Illumina SE$^5$ & Cortex & & Cortex-var \\
+FS & 30X Illumina SE$^5$ & fermi & BWA-SW$^2$ & SAMtools$^3$ \\
+SS & 30X Illumina SE$^5$ & & BWA-SW & SAMtools \\
+\botrule
+\end{tabular}}{
+$^1$ AS uses reads from Illumina jumping and fosmid libraries\\
+$^2$ BWA-SW is invoked with `bwa bwasw -b9 -q16 -r1 -w500'\\
+$^3$ INDELs are called from pileup without going through the SAMtools caller\\
+$^4$ Realigned by GATK~\citep{Depristo:2011vn} also around known INDELs\\
+$^5$ CV, FS and SS do not use the pairing information in calling\\
+}
+\end{table}
+
+\subsection{Performance on INDEL calling}
+
+%         FS     CV     SS     BS     CG     AS   sum1   sum2   sum3
+% ------------------------------------------------------------------
+% FS  381273 198526 296033 332192 237743 234712 350040        362727
+% CV  219783 251769 207981 222029 182752 164424 228197 231600 232100
+% SS  292390 190528 322095 309800 222997 199882 311714 318722 319165
+% BS  330150 201341 312624 404646 241722 229152 332120 361793 371180
+% CG  237215 166611 224035 242198 264696 161052 244290 253128 255071
+% AS  231508 143791 200100 227719 160311 323423 240918 252522 252870
+
+\begin{table*}[!htb]
+\processtable{Fraction of INDELs found in other call sets\label{tab:indel}}
+{\begin{tabular*}{\textwidth}{@{\extracolsep{\fill}}lrrrrrrrr}
+\toprule
+&FS&CV&SS&BS&CG&SS+BS+CG&SS+BS+CG+FS&SS+BS+CG+FS+CV+AS\\
+\midrule
+FS&381,273& 0.521 & 0.776 & 0.871 & 0.624 & 0.918 &       & 0.951\\
+CV& 0.873 &251,769& 0.826 & 0.882 & 0.726 & 0.906 & 0.920 & 0.922\\
+SS& 0.908 & 0.592 &322,095& 0.962 & 0.692 & 0.968 & 0.990 & 0.991\\
+BS& 0.816 & 0.498 & 0.772 &404,646& 0.597 & 0.821 & 0.894 & 0.917\\
+CG& 0.896 & 0.629 & 0.846 & 0.915 &264,696& 0.923 & 0.956 & 0.964\\
+\botrule
+\end{tabular*}}
+{INDELs that start within a homopolymer run longer than 6bp are excluded in
+all call sets. An INDEL in call set $R$ (indexed by row) is said to
+found in call set $C$ (indexed by column) if there exists an INDEL in $C$
+such that the left-aligned starting positions of the two INDELs are within 20bp
+from each other.  An INDEL in $R$ is considered to be found in
+`\mbox{SS+BS+CG}' if it is found in one of SS, BS and CG, but excluding $R$
+itself. The similar is true for the `\mbox{SS+BS+CG+FS}' and the
+`\mbox{SS+BS+CG+FS+CV+AS}' columns. In the table, a number on the diagonal equals $|R|$,
+the number of INDEL calls in the call set. The fraction equals $|\{g\in R:g
+\mbox{ is found in } C\}|/|R|$.}
+
+\end{table*}
 
 \section*{ACKNOWLEDGEMENTS}
 
