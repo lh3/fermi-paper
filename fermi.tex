@@ -234,10 +234,11 @@ active development.
 
 \begin{algorithm}[h]
 \DontPrintSemicolon
+\footnotesize
 \KwIn{Bi-interval $(k,l,s)$ of string $W$ and a symbol $a$}
 \KwOut{Bi-interval of string $aW$}
 \BlankLine
-\textbf{Function} {\sc BackwardExtension}$(a,k,l,s)$
+\textbf{Function} {\sc BackwardExt}$(a,k,l,s)$
 \Begin {
 	\For{$b\gets0$ \KwTo $5$} {
 		$k_b\gets C(b) + O(b,k-1)$
@@ -251,15 +252,16 @@ active development.
 	$l_5\gets l_1+s_1$\;
 	\Return{$(k_a,l_a,s_a)$}
 }
-\caption{BackwardExtension}
+\caption{Backward extension}
 \end{algorithm}
 
 \begin{algorithm}[h]
 \DontPrintSemicolon
+\footnotesize
 \KwIn{Bi-interval $(k,l,s)$ of string $W$ and a symbol $a$}
 \KwOut{Bi-interval of string $Wa$}
 \BlankLine
-\textbf{Function} {\sc ForwardExtension}$(a,k,l,s)$
+\textbf{Function} {\sc ForwardExt}$(a,k,l,s)$
 \Begin {
 	\For{$b\gets0$ \KwTo $5$} {
 		$l_a\gets C(b) + O(b,l-1)$
@@ -271,28 +273,29 @@ active development.
 		$k_b\gets k_{b+1}+s_{b+1}$
 	}
 	$k_5\gets k_1+s_1$\;
-	\nl$b\gets\overline{a}$\;
+	$b\gets\overline{a}$\;
 	\Return{$(k_b,l_b,s_b)$}
 }
-\caption{ForwardExtension}
+\caption{Forward extension}
 \end{algorithm}
 
 \begin{algorithm}[h]
 \DontPrintSemicolon
+\footnotesize
 \KwIn{String $P$ of length $L$ and start position $i_0$; $P[-1]=0$}
 \KwOut{Set of bi-intervals of SMEMs overlapping $i_0$}
 \BlankLine
 \textbf{Function} {\sc SuperMEM1}$(P,L,x)$
 \Begin {
-	\emph{Initialize {\sf Curr}, {\sf Prev} and {\sf Match} as empty arrays}\;
-	$(k,l,s)\gets (C(P[i_0]), C(\overline{P[i_0]}), C(P[i_0]+1) - C(P[i_0]))$\;
+	\emph{Initialize ${\sf Curr}$, ${\sf Prev}$ and ${\sf Match}$ as empty arrays}\;
+	\nl$(k,l,s)\gets (C(P[i_0]), C(\overline{P[i_0]}), C(P[i_0]+1) - C(P[i_0]))$\;
 	\nl\For{$i\gets i_0+1$ \KwTo $L$} {
 		\If{$i=L$} {
-			\emph{Append $(k,l,s)$ to {\sf Curr}}
+			\emph{Append $(k,l,s)$ to ${\sf Curr}$}
 		} \Else {
-			$(k',l',s')\gets${\sc ForwardExtension$(P[i],k,l,s)$}\;
+			$(k',l',s')\gets${\sc ForwardExt$(P[i],k,l,s)$}\;
 			\nl\If{$s'\not=s$} {
-				\emph{Append $(k,l,s)$ to {\sf Curr}}
+				\emph{Append $(k,l,s)$ to ${\sf Curr}$}
 			}
 			\If{$s'=0$} {
 				{\bf break}\;
@@ -300,32 +303,80 @@ active development.
 			$(k,l,s)\gets(k',l',s')$
 		}
 	}
-	\emph{Swap array {\sf Curr} and {\sf Prev}}\;
+	\emph{Swap array ${\sf Curr}$ and ${\sf Prev}$}\;
 	$i'\gets L$\;
 	\nl\For{$i\gets i_0-1$ \KwTo $-1$} {
-		\emph{Reset {\sf Curr} to empty}\;
+		\emph{Reset ${\sf Curr}$ to empty}\;
 		$s''\gets -1$\;
-		\For{$(k,l,s)$ {\bf in} {\sf Prev}}{
-			$(k',l',s')\gets${\sc BackwardExtension$(P[i],k,l,s)$}\;
+		\For{$(k,l,s)$ {\bf in} ${\sf Prev}$}{
+			$(k',l',s')\gets${\sc BackwardExt$(P[i],k,l,s)$}\;
 			\nl\If{$s' = 0$ {\bf or} $i = -1$} {
-				\nl\If{{\sf Curr} is empty {\bf and} $i+1<i'+1$} {
+				\nl\If{${\sf Curr}$ is empty {\bf and} $i+1<i'+1$} {
 					$i'\gets i$\;
-					\emph{Append $(k,l,s)$ to {\sf Match}}
+					\emph{Append $(k,l,s)$ to ${\sf Match}$}
 				}
 			}
 			\nl\If{$s'\not=0$ {\bf and} $s'\not=s''$} {
 				$s''\gets s'$\;
-				\emph{Append $(k,l,s)$ to {\sf Curr}}
+				\emph{Append $(k,l,s)$ to ${\sf Curr}$}
 			}
 		}
-		\If{{\sf Curr} is empty} {
+		\If{${\sf Curr}$ is empty} {
 			{\bf break}
 		}
-		\emph{Swap {\sf Curr} and {\sf Prev}}\;
+		\emph{Swap ${\sf Curr}$ and ${\sf Prev}$}\;
 	}
-	\Return {\sf Match}
+	\Return ${\sf Match}$
 }
-\caption{SuperMEM1}
+\caption{Finding super-maximal exact matches}
+\end{algorithm}
+
+\begin{algorithm}[h]
+\DontPrintSemicolon
+\footnotesize
+\KwIn{Read $P$ of length $L$ and the minimum overlap length $x$}
+\KwOut{Array of bi-intervals of reads having irreducible overlaps with the 3'-end of $P$}
+\BlankLine
+\textbf{Function} {\sc IrrOverlap}$(P,L,x)$
+\Begin {
+	\emph{Initialize ${\sf IrrOvlp}$, ${\sf Curr}$ and ${\sf Prev}$ as empty arrays}\;
+	$a\gets P[L-1]$\;
+	\nl$(k,l,s)\gets (C(a), C(\overline{a}), C(a+1) - C(a))$\;
+	\nl\For{$i\gets L-2$ \KwTo $0$} {
+		\If{$L-i-1\ge x$} {
+			$(k',l',s')\gets${\sc BackwardExt$(0,k,l,s)$}\;
+			\If{$s'\not=0$} {
+				\emph{Append $(k',l',s';\epsilon)$ to ${\sf Curr}$}\;
+			}
+		}
+		$(k,l,s)\gets${\sc BackwardExt$(P[i],k,l,s)$}\;
+	}
+	\nl\emph{Reverse array ${\sf Curr}$, and swap ${\sf Curr}$ and ${\sf Prev}$}\;
+	\nl${\sf Finished}=\emptyset$\;
+	\nl\While{${\sf Prev}$ is not empty} {
+		\emph{Reset ${\sf Curr}$ to empty}\;
+		\For{$(k,l,s;W)$ {\bf in} ${\sf Prev}$} {
+			\If{$W\in{\sf Finished}$} {
+				{\bf continue}\;
+			}
+			$(k',l',s')\gets${\sc ForwardExt}$(0,k,l,s)$\;
+			\If{$s'\not=0$} {
+				${\sf Finished}\gets{\sf Finished}\cup \{W\}$\;
+				\emph{Append $(k',l',s';W)$ to ${\sf IrrOvlp}$}\;
+				{\bf continue}\;
+			}
+			\For{$a\gets1$ \KwTo $5$} {
+				$(k',l',s')\gets${\sc ForwardExt}$(a,k,l,s)$\;
+				\If{$s'\not=0$} {
+					\emph{Append $(k',l',s';Wa)$ to ${\sf Curr}$}\;
+				}
+			}
+		}
+		\emph{Swap ${\sf Curr}$ and ${\sf Prev}$}
+	}
+	\Return{${\sf IrrOvlp}$}
+}
+\caption{Finding irreducible overlaps (SD10)}
 \end{algorithm}
 
 \end{methods}
