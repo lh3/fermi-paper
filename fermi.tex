@@ -2,6 +2,8 @@
 \copyrightyear{2012}
 \pubyear{2012}
 
+\usepackage[ruled,vlined]{algorithm2e}
+
 \usepackage{natbib}
 \bibliographystyle{apalike}
 
@@ -10,7 +12,7 @@
 \begin{document}
 \firstpage{1}
 
-\title[Variant calling with de novo assembly]{Improving single-sample SNP and INDEL calling with
+\title[Variant calling from de novo assembly]{Exploring single-sample SNP and INDEL calling with
 whole-genome de novo assembly}
 
 \author[Li]{Heng Li$^{1,}$\footnote{to whom correspondence should be addressed}}
@@ -139,7 +141,7 @@ bidirectional edge to an overlap. Naively, the DNA assembling
 problem can be cast as finding a path in the overlap graph such that
 each vertex/read is visited exactly once (though edge/overlap caused by
 repeats are not required to be traversed), equivalent to a Hamilton path
-problem which is known to be NP-complete. This has led many to believe that the
+problem~\citep{Compeau:2011fk,Li:2011zr} which is known to be NP-complete. This has led many to believe that the
 OLC approach is theoretically crippled.
 
 However, this is a misbelief. Although the assembly problem can be reduced
@@ -230,6 +232,102 @@ active development.
 
 \subsection{Rationale}
 
+\begin{algorithm}[h]
+\DontPrintSemicolon
+\KwIn{Bi-interval $(k,l,s)$ of string $W$ and a symbol $a$}
+\KwOut{Bi-interval of string $aW$}
+\BlankLine
+\textbf{Function} {\sc BackwardExtension}$(a,k,l,s)$
+\Begin {
+	\For{$b\gets0$ \KwTo $5$} {
+		$k_b\gets C(b) + O(b,k-1)$
+		$s_b\gets O(b,k+s-1) - O(b,k-1)$
+	}
+	$l_0\gets l$\;
+	$l_4\gets l_0+s_0$\;
+	\For{$b\gets3$ \KwTo $1$} {
+		$l_b\gets l_{b+1}+s_{b+1}$
+	}
+	$l_5\gets l_1+s_1$\;
+	\Return{$(k_a,l_a,s_a)$}
+}
+\caption{BackwardExtension}
+\end{algorithm}
+
+\begin{algorithm}[h]
+\DontPrintSemicolon
+\KwIn{Bi-interval $(k,l,s)$ of string $W$ and a symbol $a$}
+\KwOut{Bi-interval of string $Wa$}
+\BlankLine
+\textbf{Function} {\sc ForwardExtension}$(a,k,l,s)$
+\Begin {
+	\For{$b\gets0$ \KwTo $5$} {
+		$l_a\gets C(b) + O(b,l-1)$
+		$s_a\gets O(b,l+s-1) - O(b,l-1)$
+	}
+	$k_0\gets k$\;
+	$k_4\gets k_0+s_0$\;
+	\For{$b\gets3$ \KwTo $1$} {
+		$k_b\gets k_{b+1}+s_{b+1}$
+	}
+	$k_5\gets k_1+s_1$\;
+	\nl$b\gets\overline{a}$\;
+	\Return{$(k_b,l_b,s_b)$}
+}
+\caption{ForwardExtension}
+\end{algorithm}
+
+\begin{algorithm}[h]
+\DontPrintSemicolon
+\KwIn{String $P$ of length $L$ and start position $i_0$; $P[-1]=0$}
+\KwOut{Set of bi-intervals of SMEMs overlapping $i_0$}
+\BlankLine
+\textbf{Function} {\sc SuperMEM1}$(P,L,x)$
+\Begin {
+	\emph{Initialize {\sf Curr}, {\sf Prev} and {\sf Match} as empty arrays}\;
+	$(k,l,s)\gets (C(P[i_0]), C(\overline{P[i_0]}), C(P[i_0]+1) - C(P[i_0]))$\;
+	\nl\For{$i\gets i_0+1$ \KwTo $L$} {
+		\If{$i=L$} {
+			\emph{Append $(k,l,s)$ to {\sf Curr}}
+		} \Else {
+			$(k',l',s')\gets${\sc ForwardExtension$(P[i],k,l,s)$}\;
+			\nl\If{$s'\not=s$} {
+				\emph{Append $(k,l,s)$ to {\sf Curr}}
+			}
+			\If{$s'=0$} {
+				{\bf break}\;
+			}
+			$(k,l,s)\gets(k',l',s')$
+		}
+	}
+	\emph{Swap array {\sf Curr} and {\sf Prev}}\;
+	$i'\gets L$\;
+	\nl\For{$i\gets i_0-1$ \KwTo $-1$} {
+		\emph{Reset {\sf Curr} to empty}\;
+		$s''\gets -1$\;
+		\For{$(k,l,s)$ {\bf in} {\sf Prev}}{
+			$(k',l',s')\gets${\sc BackwardExtension$(P[i],k,l,s)$}\;
+			\nl\If{$s' = 0$ {\bf or} $i = -1$} {
+				\nl\If{{\sf Curr} is empty {\bf and} $i+1<i'+1$} {
+					$i'\gets i$\;
+					\emph{Append $(k,l,s)$ to {\sf Match}}
+				}
+			}
+			\nl\If{$s'\not=0$ {\bf and} $s'\not=s''$} {
+				$s''\gets s'$\;
+				\emph{Append $(k,l,s)$ to {\sf Curr}}
+			}
+		}
+		\If{{\sf Curr} is empty} {
+			{\bf break}
+		}
+		\emph{Swap {\sf Curr} and {\sf Prev}}\;
+	}
+	\Return {\sf Match}
+}
+\caption{SuperMEM1}
+\end{algorithm}
+
 \end{methods}
 
 \section{RESULTS}
@@ -239,9 +337,7 @@ We implemented a new de novo assembler, fermi, with a particular emphasis on
 preserving short variants. It is designed to take advantage of multiple
 processors of a machine with large shared memory.
 
-\subsection{Performance on de novo assembly}
-
-\subsection{Performance on SNP calling}
+\subsection{Evaluated call sets}
 
 \begin{table}[!htb]
 \processtable{Evaluated SNP and INDEL call sets}
@@ -251,42 +347,65 @@ Label & Data & Assembler & Mapper & Caller \\
 \midrule
 AS & 96X Illumina PE$^1$ & AllPaths-LG & BWA-SW$^2$ & SAMtools$^3$ \\
 BS & 60X Illumina PE & & BWA$^4$ & SAMtools \\
-CG & Complete Genomics& & cgatools2 & cgatools2 \\
-CV & 26X Illumina SE$^5$ & Cortex & & Cortex-var \\
-FS & 30X Illumina SE$^5$ & fermi & BWA-SW$^2$ & SAMtools$^3$ \\
-SS & 30X Illumina SE$^5$ & & BWA-SW & SAMtools \\
+CG & Complete Genomics& & cgatools2$^5$ & cgatools2 \\
+CV & 26X Illumina SE$^6$ & Cortex & & Cortex-var \\
+FS & 30X Illumina SE$^6$ & fermi & BWA-SW$^2$ & SAMtools$^3$ \\
+MD & 60X multiple        & & MAQ & 1000g pilot$^7$ \\
+SS & 30X Illumina SE$^6$ & & BWA-SW & SAMtools \\
+TS & 30X Illumina SE$^6$ & & Bowtie2 & SAMtools \\
 \botrule
 \end{tabular}}{
 $^1$ AS uses reads from Illumina jumping and fosmid libraries\\
 $^2$ BWA-SW is invoked with `bwa bwasw -b9 -q16 -r1 -w500'\\
 $^3$ INDELs are called from pileup without going through the SAMtools caller\\
 $^4$ Realigned by GATK~\citep{Depristo:2011vn} also around known INDELs\\
-$^5$ CV, FS and SS do not use the pairing information in calling\\
+$^5$ Only `VQHIGH' calls are retained\\
+$^6$ CV, FS, SS and TS do not use the pairing information in calling\\
+$^7$ 1000 Genomes Project pilot calls; generated from Dindel and multiple SNP callers\\
 }
+\end{table}
+
+\subsection{Performance on SNP calling}
+
+\begin{table}[!htb]
+\processtable{Statistics of SNP call sets}
+{\begin{tabular}{p{1.5cm}rrrrrrr}
+\toprule
+& FS & CV & SS & TS & BS & CG & MD \\
+\midrule
+\#SNPs (M) & 3.37 & 2.20 & 3.24 & 3.34 & 3.50 & 3.34 & 2.69\\
+\#hets (M) & 1.96 & 1.04 & 1.94 & 1.99 & 2.11 & 2.04 & 1.65\\
+ts/tv      & 2.03 & 2.03 & 2.08 & 2.09 & 2.11 & 2.12 & 2.06\\
+DN50 (bp)  & 3,611& 6,662& 3,523& 3,428& 3,392& 3,447&3,992\\
+DN2/DN50   & 22.2 & 20.8 & 23.4 & 21.8 & 22.7 & 22.3 & 22.9\\
+\botrule
+\end{tabular}}{}
 \end{table}
 
 \subsection{Performance on INDEL calling}
 
-%         FS     CV     SS     BS     CG     AS   sum1   sum2   sum3
+%         FS     CV     SS     BS     CG     MD     AS   sum1   sum2   sum3
 % ------------------------------------------------------------------
-% FS  381273 198526 296033 332192 237743 234712 350040        362727
-% CV  219783 251769 207981 222029 182752 164424 228197 231600 232100
-% SS  292390 190528 322095 309800 222997 199882 311714 318722 319165
-% BS  330150 201341 312624 404646 241722 229152 332120 361793 371180
-% CG  237215 166611 224035 242198 264696 161052 244290 253128 255071
-% AS  231508 143791 200100 227719 160311 323423 240918 252522 252870
+% FS  381273 198526 296033 332192 237743 223336 234712 352581        363686
+% CV  219783 251769 207981 222029 182752 178131 164424 229231 231977 232443
+% SS  292390 190528 322095 309800 222997 222804 199882 313746 318962 319354
+% BS  330150 201341 312624 404646 241722 228431 229152 336172 363518 372368
+% CG  237215 166611 224035 242198 264696 199071 161052 247969 253713 255415
+% MD  219542 163070 220968 225339 196936 240424 149753 231786 234244 235041
+% AS  231508 143791 200100 227719 160311 151455 323423 242816 253042 253358
 
 \begin{table*}[!htb]
 \processtable{Fraction of INDELs found in other call sets\label{tab:indel}}
-{\begin{tabular*}{\textwidth}{@{\extracolsep{\fill}}lrrrrrrrr}
+{\begin{tabular*}{\textwidth}{@{\extracolsep{\fill}}lrrrrrrrrr}
 \toprule
-&FS&CV&SS&BS&CG&SS+BS+CG&SS+BS+CG+FS&SS+BS+CG+FS+CV+AS\\
+&FS&CV&SS&BS&CG&MD&SS+BS+CG+MD&SS+BS+CG+MD+FS&SS+BS+CG+MD+FS+CV+AS\\
 \midrule
-FS&381,273& 0.521 & 0.776 & 0.871 & 0.624 & 0.918 &       & 0.951\\
-CV& 0.873 &251,769& 0.826 & 0.882 & 0.726 & 0.906 & 0.920 & 0.922\\
-SS& 0.908 & 0.592 &322,095& 0.962 & 0.692 & 0.968 & 0.990 & 0.991\\
-BS& 0.816 & 0.498 & 0.772 &404,646& 0.597 & 0.821 & 0.894 & 0.917\\
-CG& 0.896 & 0.629 & 0.846 & 0.915 &264,696& 0.923 & 0.956 & 0.964\\
+FS&381,273& 0.521 & 0.776 & 0.871 & 0.624 & 0.586 & 0.925 &       & 0.954\\
+CV& 0.873 &251,769& 0.826 & 0.882 & 0.726 & 0.708 & 0.910 & 0.921 & 0.923\\
+SS& 0.908 & 0.592 &322,095& 0.962 & 0.692 & 0.692 & 0.974 & 0.990 & 0.991\\
+BS& 0.816 & 0.498 & 0.772 &404,646& 0.597 & 0.564 & 0.831 & 0.898 & 0.920\\
+CG& 0.896 & 0.629 & 0.846 & 0.915 &264,696& 0.752 & 0.937 & 0.958 & 0.965\\
+MD& 0.913 & 0.678 & 0.919 & 0.937 & 0.819 &240,424& 0.964 & 0.974 & 0.978\\
 \botrule
 \end{tabular*}}
 {INDELs that start within a homopolymer run longer than 6bp are excluded in
@@ -294,13 +413,32 @@ all call sets. An INDEL in call set $R$ (indexed by row) is said to
 found in call set $C$ (indexed by column) if there exists an INDEL in $C$
 such that the left-aligned starting positions of the two INDELs are within 20bp
 from each other.  An INDEL in $R$ is considered to be found in
-`\mbox{SS+BS+CG}' if it is found in one of SS, BS and CG, but excluding $R$
-itself. The similar is true for the `\mbox{SS+BS+CG+FS}' and the
-`\mbox{SS+BS+CG+FS+CV+AS}' columns. In the table, a number on the diagonal equals $|R|$,
+`\mbox{SS+BS+CG+MD}' if it is found in one of SS, BS, CG and MD, but excluding $R$
+itself. The similar is true for the `\mbox{SS+BS+CG+MD+FS}' and the
+`\mbox{SS+BS+CG+MD+FS+CV+AS}' columns. In the table, a number on the diagonal equals $|R|$,
 the number of INDEL calls in the call set. The fraction equals $|\{g\in R:g
 \mbox{ is found in } C\}|/|R|$.}
 
 \end{table*}
+
+\subsection{Performance on de novo assembly}
+
+\begin{table}[!htb]
+\processtable{Statistics on human whole-genome assemblies}
+{\begin{tabular}{lrrrrr}
+\toprule
+& AllPaths & fermi & SGA & SOAP & HuRef \\
+\midrule
+Raw contig bases & & 3.01G & 2.76G & 2.88G & \\
+Aligned contig bases & 2.61G & 2.91G & 2.75G & 2.87G & \\
+Aligned N50 & 23.8k & 10.8k & 9.9k & 6.6k & 103.4k \\
+Covered ref. bases & 2.59G & 2.75G & 2.70G & 2.73G & \\
+\# $\ge200$bp break points & & 11.3k & 7.7k & 5.6k & \\
+\# $[300,350]$ bp del. & 2,369 & 653 & 759 & 416 & 1,072 \\
+\# $[300,350]$ bp ins. & 170 & 52 & 52 & 80 & 748 \\
+\botrule
+\end{tabular}}{}
+\end{table}
 
 \section*{ACKNOWLEDGEMENTS}
 
