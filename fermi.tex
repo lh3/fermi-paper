@@ -137,45 +137,46 @@ essentially the overlap-layout-consensus (OLC) approach.
 string problem is flawed in the presence of repeat. He (see also
 \citealt{DBLP:journals/algorithmica/KececiogluM95}) further proposed the
 concept of \emph{overlap graph}, where a vertex corresponds to a read and a
-bidirectional edge to an overlap. Naively, the DNA assembling
-problem can be cast as finding a path in the overlap graph such that
-each vertex/read is visited exactly once (though edge/overlap caused by
-repeats are not required to be traversed), equivalent to a Hamilton path
-problem~\citep{Compeau:2011fk,Li:2011zr} which is known to be NP-complete. This has led many to believe that the
-OLC approach is theoretically crippled.
+bidirectional edge to an overlap. Naively, the DNA assembling problem can be
+cast as finding a path in the overlap graph such that each vertex/read is
+visited exactly once (though edge/overlap caused by repeats are not required to
+be traversed), equivalent to a Hamilton path
+problem~\citep{Compeau:2011fk,Li:2011zr} which is known to be NP-complete. This
+has led many to believe that the OLC approach is theoretically crippled.
 
-However, this is a misbelief. Although the assembly problem can be reduced
-to a Hamilton path problem, it can be reduced to other problems as well and
-in practice almost no assemblers try to solve a Hamilton path problem.
-We note that a fundamental difference between a generic
-graph and an overlap graph is that the latter can be transitively
-reduced while retaining the read relationship. More formally,
-if $v_1\to v_2$, $v_2\to v_3$ and $v_1\to v_3$ are all present,
-edge $v_1\to v_3$ is said to be \emph{reducible}. When we removed all the
-reducible edges, a procedure called \emph{transitive reduction}, the resulting graph
-is still a loyal representation of the overlap graph~\citep{Myers:1995nx}, but
-the path corresponding to the assembly is not a Hamilton path any more because
-reads from repetitive regions need to be traversed multiple times.
+However, this is a misbelief. Although the assembly problem can be reduced to a
+Hamilton path problem, it can be reduced to other problems as well and in
+practice almost no assemblers try to solve a Hamilton path problem.  We note
+that a fundamental difference between a generic graph and an overlap graph is
+that the latter can be transitively reduced while retaining the read
+relationship. More formally, if $v_1\to v_2$, $v_2\to v_3$ and $v_1\to v_3$ are
+all present, edge $v_1\to v_3$ is said to be \emph{reducible}. When we removed
+all the contained reads and reducible edges, a procedure called
+\emph{transitive reduction}, the resulting graph is still a loyal
+representation of the overlap graph~\citep{Myers:1995nx}, but the path
+corresponding to the assembly is not a Hamilton path any more because reads
+from repetitive regions need to be traversed multiple times.
 
 In a transitively reduced graph, if there exists $v_1\to v_2$ with the
-out-degree of $v_1$ and in-degree of $v_2$ both equal to 1, we are able
-to merge $v_1$ and $v_2$ into one vertex without altering the topology of the
+out-degree of $v_1$ and in-degree of $v_2$ both equal to 1, we are able to
+merge $v_1$ and $v_2$ into one vertex without altering the topology of the
 graph. After we performed all possible merges, we get a \emph{unitig graph} in
 which each vertex corresponds to a \emph{unitig}, representing a maximal linear
-sequence that can be resolved by reads. Multiple copies of a repeat may
-be collapsed to a single unitig. Unitig plays a central role in the Celera
+sequence that can be resolved by reads. Multiple copies of a repeat may be
+collapsed to a single unitig. The concept of unitig helps to greatly simplify
+an assembly graph. It has played a central role in the Celera
 assembler~\citep{Myers:2000kl}.
 
-The concept of unitig helps to greatly simplify an assembly graph, but it does
-not theoretically solve the sequence assembly to the end. \citet{Myers:2005bh},
-based on the suggestion by~\citet{Pevzner:2001vn}, proposed to compute a
-traversal count for each edge and to remove false overlap edges by solving a
-minimum cost network flow problem. Finding the optimal assembly in the resultant
-graph can be reduced to a Eulerian path problem, which has a linear time
-solution. Myers originally applied this procedure to \emph{string graph},
-an equivalence to unitig graph. \citet{Medvedev:2009ve} pointed out
-that determining the traversal count can also be resolved directly in the
-bidirectional unitig graph using a bidirected network flow-based algorithm.
+On the other hand, introducing unitigs has not theoretically solved the
+sequence assembly to the end. \citet{Myers:2005bh}, based on the suggestion
+by~\citet{Pevzner:2001vn}, proposed to compute a traversal count for each edge
+and to remove false overlap edges by solving a minimum cost network flow
+problem. Finding the optimal assembly in the resultant graph can be reduced to
+a Eulerian path problem, which has a linear time solution. Myers originally
+applied this procedure to \emph{string graph}, an equivalence to unitig graph.
+\citet{Medvedev:2009ve} pointed out that determining the traversal count can
+also be resolved directly in the bidirectional unitig graph using a bidirected
+network flow-based algorithm.
 
 Once we get a transitively reduced graph, the following steps can be achieved
 in roughly linear time most of time -- the worst case almost never happens
@@ -185,7 +186,7 @@ $O(E)$ time, where $E$ is the number of edges which is usually much larger than
 $N$. This still makes an OLC based approach less favorable in short-read
 assembly where $N$ can be of the order of $10^9$.
 
-A breakthrough achieved by~\citet{Simpson:2010uq,Simpson:2011ly} finally solved
+A breakthrough achieved by~\citet{Simpson:2010uq} finally solved
 this last remaining problem at least when we only consider exact overlaps.
 These authors developed a $O(N)$ algorithm to find all the irreducible edges,
 effectively replacing the overlapping and transitive reduction phases.
@@ -200,13 +201,14 @@ linear-time algorithm. This makes the de Bruijn graph approach very attractive
 for assembling many short reads.
 
 However, de Bruijn is `lossy'. From a theoretical point view, a de Bruijn graph
-is equivalent to a transitively reduced overlap graph built by splitting a long
-read into $k$-mer reads and requiring $(k-1)$-mer exact overlaps. Because
-long reads all effectively work as $k$-bp reads in a de Bruijn graph, longer
-range information is lost and as a result, a path in the graph may be
-invalidated by reads. In contrast, in a unitig graph or equivalently a string
-graph each path models a valid assembly from input reads. \citet{Myers:2005bh}
-called this property of path consistency as \emph{read coherence}.
+is equivalent to an overlap graph built by splitting a long read into overlap
+$k$-mers and requiring ($k$-1)-mer exact overlaps between non-redundant
+$k$-mers.  Such a graph does not have transitive edges. Because long reads all
+effectively work as $k$-bp reads in a de Bruijn graph, longer range information
+is lost and as a result, a path in the graph may be invalidated by reads. In
+contrast, in a unitig graph or equivalently a string graph each path models a
+valid assembly from input reads. \citet{Myers:2005bh} called this property of
+path consistency as \emph{read coherence}.
 
 Losing the long-range information in reads, a de Bruijn graph by itself has
 reduced power to resolve short repeats. This flaw is usually amended by mapping
@@ -231,6 +233,28 @@ problems are not solved perfectly. De novo assembly is still a field under
 active development.
 
 \subsection{Rationale}
+
+\begin{algorithm}[h]
+\DontPrintSemicolon
+\footnotesize
+\KwIn{Sequence index $i\ge0$}
+\KwOut{Sequence $P$ and $k$, the rank of $P$}
+\BlankLine
+\textbf{Function} {\sc RetrieveSeq}$(i)$
+\Begin {
+	$k\gets i$\;
+	$P\gets\epsilon$\;
+	\While{\bf true} {
+		$a\gets B[k]$\;
+		$k\gets C(a)+O(a,k)-1$\;
+		\If{$a=0$}{
+			\Return $(P,k)$
+		}
+		$P\gets aP$
+	}
+}
+\caption{Sequence retrieval}
+\end{algorithm}
 
 \begin{algorithm}[h]
 \DontPrintSemicolon
@@ -263,34 +287,87 @@ active development.
 \BlankLine
 \textbf{Function} {\sc ForwardExt}$(a,k,l,s)$
 \Begin {
-	\For{$b\gets0$ \KwTo $5$} {
-		$l_a\gets C(b) + O(b,l-1)$
-		$s_a\gets O(b,l+s-1) - O(b,l-1)$
-	}
-	$k_0\gets k$\;
-	$k_4\gets k_0+s_0$\;
-	\For{$b\gets3$ \KwTo $1$} {
-		$k_b\gets k_{b+1}+s_{b+1}$
-	}
-	$k_5\gets k_1+s_1$\;
-	$b\gets\overline{a}$\;
-	\Return{$(k_b,l_b,s_b)$}
+	$(l',k',s')\gets${\sc BackwardExt}$(\overline{a},l,k,s)$\;
+	\Return{$(k',l',s')$}
 }
+%\textbf{Function} {\sc ForwardExt}$(a,k,l,s)$
+%\Begin {
+%	\For{$b\gets0$ \KwTo $5$} {
+%		$l_a\gets C(b) + O(b,l-1)$
+%		$s_a\gets O(b,l+s-1) - O(b,l-1)$
+%	}
+%	$k_0\gets k$\;
+%	$k_4\gets k_0+s_0$\;
+%	\For{$b\gets3$ \KwTo $1$} {
+%		$k_b\gets k_{b+1}+s_{b+1}$
+%	}
+%	$k_5\gets k_1+s_1$\;
+%	$b\gets\overline{a}$\;
+%	\Return{$(k_b,l_b,s_b)$}
+%}
 \caption{Forward extension}
 \end{algorithm}
 
 \begin{algorithm}[h]
 \DontPrintSemicolon
 \footnotesize
-\KwIn{String $P$ of length $L$ and start position $i_0$; $P[-1]=0$}
+\KwIn{Read $P$ and the minimum overlap length $x$}
+\KwOut{Array of bi-intervals of reads having irreducible overlaps with the 3'-end of $P$}
+\BlankLine
+\textbf{Function} {\sc IrrOverlap}$(P,x)$
+\Begin {
+	\emph{Initialize ${\sf IrrOvlp}$, ${\sf Curr}$ and ${\sf Prev}$ as empty arrays}\;
+	$a\gets P[|P|-1]$\;
+	\nl$(k,l,s)\gets (C(a), C(\overline{a}), C(a+1) - C(a))$\;
+	\nl\For{$i\gets |P|-2$ \KwTo $0$} {
+		\If{$|P|-i-1\ge x$} {
+			$(k',l',s')\gets${\sc BackwardExt$(0,k,l,s)$}\;
+			\If{$s'\not=0$} {
+				\emph{Append $(k',l',s';i;\epsilon)$ to ${\sf Curr}$}\;
+			}
+		}
+		$(k,l,s)\gets${\sc BackwardExt$(P[i],k,l,s)$}\;
+	}
+	\nl\emph{Reverse array ${\sf Curr}$, and swap ${\sf Curr}$ and ${\sf Prev}$}\;
+	\nl${\sf Finished}=\emptyset$\;
+	\nl\While{${\sf Prev}$ is not empty} {
+		\emph{Reset ${\sf Curr}$ to empty}\;
+		\For{$(k,l,s;i;W)$ {\bf in} ${\sf Prev}$} {
+			\If{$W\in{\sf Finished}$} {
+				{\bf continue}\;
+			}
+			$(k',l',s')\gets${\sc ForwardExt}$(0,k,l,s)$\;
+			\If{$s'\not=0$} {
+				${\sf Finished}\gets{\sf Finished}\cup \{W\}$\;
+				\emph{Append $(k',l',s';i;W)$ to ${\sf IrrOvlp}$}\;
+				{\bf continue}\;
+			}
+			\For{$a\gets1$ \KwTo $5$} {
+				$(k',l',s')\gets${\sc ForwardExt}$(a,k,l,s)$\;
+				\If{$s'\not=0$} {
+					\emph{Append $(k',l',s';Wa)$ to ${\sf Curr}$}\;
+				}
+			}
+		}
+		\emph{Swap ${\sf Curr}$ and ${\sf Prev}$}
+	}
+	\Return{${\sf IrrOvlp}$}
+}
+\caption{Finding irreducible overlaps (SD10)}
+\end{algorithm}
+
+\begin{algorithm}[h]
+\DontPrintSemicolon
+\footnotesize
+\KwIn{String $P$ and start position $i_0$; $P[-1]=0$}
 \KwOut{Set of bi-intervals of SMEMs overlapping $i_0$}
 \BlankLine
-\textbf{Function} {\sc SuperMEM1}$(P,L,x)$
+\textbf{Function} {\sc SuperMEM1}$(P,x)$
 \Begin {
 	\emph{Initialize ${\sf Curr}$, ${\sf Prev}$ and ${\sf Match}$ as empty arrays}\;
 	\nl$(k,l,s)\gets (C(P[i_0]), C(\overline{P[i_0]}), C(P[i_0]+1) - C(P[i_0]))$\;
-	\nl\For{$i\gets i_0+1$ \KwTo $L$} {
-		\If{$i=L$} {
+	\nl\For{$i\gets i_0+1$ \KwTo $|P|$} {
+		\If{$i=|P|$} {
 			\emph{Append $(k,l,s)$ to ${\sf Curr}$}
 		} \Else {
 			$(k',l',s')\gets${\sc ForwardExt$(P[i],k,l,s)$}\;
@@ -304,7 +381,7 @@ active development.
 		}
 	}
 	\emph{Swap array ${\sf Curr}$ and ${\sf Prev}$}\;
-	$i'\gets L$\;
+	$i'\gets |P|$\;
 	\nl\For{$i\gets i_0-1$ \KwTo $-1$} {
 		\emph{Reset ${\sf Curr}$ to empty}\;
 		$s''\gets -1$\;
@@ -334,49 +411,38 @@ active development.
 \begin{algorithm}[h]
 \DontPrintSemicolon
 \footnotesize
-\KwIn{Read $P$ of length $L$ and the minimum overlap length $x$}
-\KwOut{Array of bi-intervals of reads having irreducible overlaps with the 3'-end of $P$}
+\KwIn{FM-index and the minimum overlap length $x$}
+\KwOut{Unitig graph $G=(V,E)$}
 \BlankLine
-\textbf{Function} {\sc IrrOverlap}$(P,L,x)$
+\textbf{Function} {\sc Unitig}$(V,E,x,i)$
 \Begin {
-	\emph{Initialize ${\sf IrrOvlp}$, ${\sf Curr}$ and ${\sf Prev}$ as empty arrays}\;
-	$a\gets P[L-1]$\;
-	\nl$(k,l,s)\gets (C(a), C(\overline{a}), C(a+1) - C(a))$\;
-	\nl\For{$i\gets L-2$ \KwTo $0$} {
-		\If{$L-i-1\ge x$} {
-			$(k',l',s')\gets${\sc BackwardExt$(0,k,l,s)$}\;
-			\If{$s'\not=0$} {
-				\emph{Append $(k',l',s';\epsilon)$ to ${\sf Curr}$}\;
-			}
-		}
-		$(k,l,s)\gets${\sc BackwardExt$(P[i],k,l,s)$}\;
-	}
-	\nl\emph{Reverse array ${\sf Curr}$, and swap ${\sf Curr}$ and ${\sf Prev}$}\;
-	\nl${\sf Finished}=\emptyset$\;
-	\nl\While{${\sf Prev}$ is not empty} {
-		\emph{Reset ${\sf Curr}$ to empty}\;
-		\For{$(k,l,s;W)$ {\bf in} ${\sf Prev}$} {
-			\If{$W\in{\sf Finished}$} {
-				{\bf continue}\;
-			}
-			$(k',l',s')\gets${\sc ForwardExt}$(0,k,l,s)$\;
-			\If{$s'\not=0$} {
-				${\sf Finished}\gets{\sf Finished}\cup \{W\}$\;
-				\emph{Append $(k',l',s';W)$ to ${\sf IrrOvlp}$}\;
-				{\bf continue}\;
-			}
-			\For{$a\gets1$ \KwTo $5$} {
-				$(k',l',s')\gets${\sc ForwardExt}$(a,k,l,s)$\;
-				\If{$s'\not=0$} {
-					\emph{Append $(k',l',s';Wa)$ to ${\sf Curr}$}\;
+	\textbf{Function} {\sc SemiExt$(P,k,x)$}
+	\Begin {
+		\While{\bf true} {
+			${\sf IrrOvlp}\gets${\sc IrrOverlap}$(P,x)$\;
+			\If{${\sf \#IrrOvlp}=1$} {
+				$(k',l',s';i;W)\gets{\sf IrrOvlp}[1]$\;
+				${\sf IrrOvlp}'\gets${\sc IrrOverlap}$(\overline{P_i\circ W},x)$\;
+				\If{${\sf \#IrrOvlp}'=1$} {
+					$P\gets P\circ W$\;
+					$k\gets l'$\;
+					{\bf continue}\;
 				}
 			}
+			\For{$(k',l',s';i;W)$ {\bf in} ${\sf IrrOvlp}$} {
+				$E\gets E\cup \{(k,k')\}$
+			}
+			\Return{$(P,k)$}
 		}
-		\emph{Swap ${\sf Curr}$ and ${\sf Prev}$}
 	}
-	\Return{${\sf IrrOvlp}$}
+	\BlankLine
+	$(P,k)\gets${\sc RetrieveSeq}$(i)$\;
+	$(P',k')\gets${\sc RetrieveSeq}$(i+1)$\;
+	$(P,k')\gets${\sc SemiExt}$(P,k',x)$\;
+	$(P,k)\gets${\sc SemiExt}$(\overline{P},k,x)$\;
+	$V\gets V\cup\{(k',k;P)\}$
 }
-\caption{Finding irreducible overlaps (SD10)}
+\caption{Backward extension}
 \end{algorithm}
 
 \end{methods}
@@ -426,9 +492,9 @@ $^7$ 1000 Genomes Project pilot calls; generated from Dindel and multiple SNP ca
 \midrule
 \#SNPs (M) & 3.37 & 2.20 & 3.24 & 3.34 & 3.50 & 3.34 & 2.69\\
 \#hets (M) & 1.96 & 1.04 & 1.94 & 1.99 & 2.11 & 2.04 & 1.65\\
-ts/tv      & 2.03 & 2.03 & 2.08 & 2.09 & 2.11 & 2.12 & 2.06\\
-DN50 (bp)  & 3,611& 6,662& 3,523& 3,428& 3,392& 3,447&3,992\\
-DN2/DN50   & 22.2 & 20.8 & 23.4 & 21.8 & 22.7 & 22.3 & 22.9\\
+ts/tv      & 2.04 & 2.03 & 2.08 & 2.09 & 2.11 & 2.12 & 2.06\\
+DN50 (bp)  & 3,602& 6,662& 3,523& 3,428& 3,392& 3,447&3,992\\
+DN2/DN50   & 22.1 & 20.8 & 23.4 & 21.8 & 22.7 & 22.3 & 22.9\\
 \botrule
 \end{tabular}}{}
 \end{table}
@@ -437,12 +503,12 @@ DN2/DN50   & 22.2 & 20.8 & 23.4 & 21.8 & 22.7 & 22.3 & 22.9\\
 
 %         FS     CV     SS     BS     CG     MD     AS   sum1   sum2   sum3
 % ------------------------------------------------------------------
-% FS  381273 198526 296033 332192 237743 223336 234712 352581        363686
-% CV  219783 251769 207981 222029 182752 178131 164424 229231 231977 232443
-% SS  292390 190528 322095 309800 222997 222804 199882 313746 318962 319354
-% BS  330150 201341 312624 404646 241722 228431 229152 336172 363518 372368
-% CG  237215 166611 224035 242198 264696 199071 161052 247969 253713 255415
-% MD  219542 163070 220968 225339 196936 240424 149753 231786 234244 235041
+% FS  383078 198513 295926 332481 237810 223302 235105 352900        364167
+% CV  219795 251769 207981 222029 182752 178131 164424 229231 231985 232448
+% SS  292270 190528 322095 309800 222997 222804 199882 313746 318967 319350
+% BS  330405 201341 312624 404646 241722 228431 229152 336172 363859 372496
+% CG  237294 166611 224035 242198 264696 199071 161052 247969 253760 255437
+% MD  219497 163070 220968 225339 196936 240424 149753 231786 234230 235027
 % AS  231508 143791 200100 227719 160311 151455 323423 242816 253042 253358
 
 \begin{table*}[!htb]
@@ -451,10 +517,10 @@ DN2/DN50   & 22.2 & 20.8 & 23.4 & 21.8 & 22.7 & 22.3 & 22.9\\
 \toprule
 &FS&CV&SS&BS&CG&MD&SS+BS+CG+MD&SS+BS+CG+MD+FS&SS+BS+CG+MD+FS+CV+AS\\
 \midrule
-FS&381,273& 0.521 & 0.776 & 0.871 & 0.624 & 0.586 & 0.925 &       & 0.954\\
+FS&383,078& 0.518 & 0.772 & 0.868 & 0.620 & 0.583 & 0.921 &       & 0.951\\
 CV& 0.873 &251,769& 0.826 & 0.882 & 0.726 & 0.708 & 0.910 & 0.921 & 0.923\\
 SS& 0.908 & 0.592 &322,095& 0.962 & 0.692 & 0.692 & 0.974 & 0.990 & 0.991\\
-BS& 0.816 & 0.498 & 0.772 &404,646& 0.597 & 0.564 & 0.831 & 0.898 & 0.920\\
+BS& 0.816 & 0.498 & 0.772 &404,646& 0.597 & 0.564 & 0.831 & 0.899 & 0.920\\
 CG& 0.896 & 0.629 & 0.846 & 0.915 &264,696& 0.752 & 0.937 & 0.958 & 0.965\\
 MD& 0.913 & 0.678 & 0.919 & 0.937 & 0.819 &240,424& 0.964 & 0.974 & 0.978\\
 \botrule
@@ -480,13 +546,13 @@ the number of INDEL calls in the call set. The fraction equals $|\{g\in R:g
 \toprule
 & AllPaths & fermi & SGA & SOAP & HuRef \\
 \midrule
-Raw contig bases & & 3.01G & 2.76G & 2.88G & \\
-Aligned contig bases & 2.61G & 2.91G & 2.75G & 2.87G & \\
-Aligned N50 & 23.8k & 10.8k & 9.9k & 6.6k & 103.4k \\
-Covered ref. bases & 2.59G & 2.75G & 2.70G & 2.73G & \\
-\# $\ge200$bp break points & & 11.3k & 7.7k & 5.6k & \\
-\# $[300,350]$ bp del. & 2,369 & 653 & 759 & 416 & 1,072 \\
-\# $[300,350]$ bp ins. & 170 & 52 & 52 & 80 & 748 \\
+Raw contig bases & 2.61G & 2.92G & 2.76G & 2.88G & 2.81G \\
+Aligned contig bases & 2.61G & 2.88G & 2.75G & 2.87G & 2.81G \\
+Aligned N50 & 23.8k & 11.3k & 9.9k & 6.6k & 103.4k \\
+Covered ref. bases & 2.59G & 2.75G & 2.70G & 2.73G & 2.78G \\
+\# break points & 6,511 & 3,173 & 2,997 & 1,960 & 9,174 \\
+\# $[300,350]$ bp del. & 2,370 & 678 & 777 & 427 & 1,075 \\
+\# $[300,350]$ bp ins. & 170 & 60 & 57 & 81 & 752 \\
 \botrule
 \end{tabular}}{}
 \end{table}
