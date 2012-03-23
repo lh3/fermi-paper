@@ -123,6 +123,17 @@ assembler for human assembly.
 
 \begin{methods}
 \section{METHODS}
+
+The methods section is organized as follows. We first review the history
+of de novo assembly in the theoretical aspects, which leads to the rationale
+behind fermi: to use unitigs as a lossless representation of reads. We then
+summarize the notations used in the article and introduce bidirectional
+FM-index for DNA sequences. We will present several algorithms for assembling
+using the bidirectional FM-index. The key algorithm is based on previous
+works~\citep{Simpson:2010uq}, but we need to adapt it to our new index. We
+also remove the recursion in the original algorithm. Finally we will discuss
+practical concerns in implementation.
+
 \subsection{Theoretical background}
 \subsubsection{A history of the overlap-layout-consensus paradigm}
 Computer assisted sequence assembly can be dated back to the late
@@ -233,6 +244,104 @@ problems are not solved perfectly. De novo assembly is still a field under
 active development.
 
 \subsection{Rationale}
+Being coherent, a perfectly constructed unitig graph annotated with per-unitig
+read counts in fact encodes all the information in reads. It is theoretically
+possible to apply any read-based analyses to unitigs, including SNP calling,
+short INDEL calling, copy number analyses and structural variantion discovery.
+This is the rationale behind fermi.
+
+\subsection{Strings and FM-index}
+
+Table 1 presents the notations used in this article.
+
+\begin{table}[htb]\label{tab:notation}
+\processtable{Notations}
+{\begin{tabular}{lp{7cm}}
+\toprule
+Symbol & Description \\
+\midrule
+$T$ & String: $T=a_0a_1\ldots a_{n-1}$ with $a_{n-1}=\$$\\
+$|T|$ & Length of $T$ including sentinels: $|T|=n$\\
+$T[i]$ & The $i$-th symbol in string $T$: $T[i]=a_i$\\
+$T[i,j]$ & Substring: $T[i,j]=a_i\ldots a_j$\\
+$T_i$ & Suffix: $T_i=T[i,n-1]$\\
+$S'$ & Inverse suffix array: $S'(i)=|\{j:T_j<T_i\}|$\\
+$S$ & Suffix array; $S(i)$ is the position of the $i$-th smallest suffix\\
+$B$ & BWT: $B[i]=T[S(i)-1]$ if $S(i)>0$ or $B[i]=\$$ otherwise\\
+$C(a)$ & Accumul. count array: $C(a)=|\{0\le i\le n-1:T[i]<a\}|$ \\
+$O(a,i)$ & Occurrence array: $O(a,i)=|\{0\le j\le i:B[j]=a\}|$\\
+$P\circ W$ & String concatenation of string $P$ and $W$\\
+$Pa$ & String concatenation of string $P$ and symbol $a$: $Pa=P\circ a$\\
+$\overline{P}$ & Watson-Crick reverse complement of DNA string $P$\\
+\botrule
+\end{tabular}}{}
+\end{table}
+
+\subsubsection{Strings with multiple sentinels}
+
+Let $\Sigma=\{\mbox{\tt \$},\mbox{\tt A},\mbox{\tt C},\mbox{\tt G},\mbox{\tt
+T},\mbox{\tt N}\}$ be the \emph{alphabet} of DNA sequences with a predefined
+lexicographical order $\mbox{\tt \$}<\mbox{\tt A}<\mbox{\tt C}<\mbox{\tt
+G}<\mbox{\tt T}<\mbox{\tt N}$, where `{\tt N}' represents an ambiguous base and
+`{\tt \$}' is a sentinel that marks the end of a string. An element in $\Sigma$
+is called a \emph{symbol} and a sequence of symbols is called a \emph{string}.
+Given a string $T$, let $|T|$ be the length of the string, $T[i]$,
+$i=0,\ldots,|T|-1$, be the $i$-th symbol in the string, $T[i,j]$, $0\le i\le
+j<|T|$, be a substring and $T_i=T[i,|T|-1]$ be a suffix of $T$. Following
+the definition by~\citet{en:2009fk}, we define a string terminated with `{\tt
+\$}' as a \emph{text}. A text may have multiple sentinals. In a text $T$, if
+$T[i]=\$$ and $T[j]=\$$, we mandate $T[i]<T[j]$ if and only if $i<j$. Thus when
+we compare two suffixes of $T$, we do not need to compare beyond a sentinel
+because each sentinel has a different lexicographical rank.
+
+For two strings $P$ and $W$, let $P\circ W$ be their string concatenation.
+We may sometimes write $P\circ W$ as $PW$ if it is unambiguous in the context.
+Given an ordered set of texts, we call their ordered string concatenation
+as a \emph{collection}, which is also a text. For example, suppose we have
+two reads. The first is {\tt ACG} and the second is {\tt GTG}. The collection
+of the two reads is $T=\mbox{\tt ACG\$GTG\$}$. Suffix $T_2<T_6$ because the first
+sentinal is lexicographically smaller than the second.
+
+For convenience, we assign an integer from 0 to 5 to `{\tt \$}', `{\tt A}',
+`{\tt C}', `{\tt G}', `{\tt T}' and `{\tt N}', respectively. We may use both
+the integer and the letter representations throughout the article. In addition,
+given a symbol $a$, we define $\overline{a}$ as the Watson-Crick complement of $a$.
+We regard the complement of `{\tt \$}' and `{\tt N}' is identical to itself.
+
+\subsubsection{FM-index}
+
+The \emph{suffix array} $S$ of text $T$ is a permutation of integers between 0 and
+$|T|-1$, where $S(i)$, $0\le i<|T|$ is the position of the $i$-th smallest
+suffix of $T$. $S$ is inversible. The inverse of $S$ is call the \emph{inverse
+suffix array} denoted by $S'$. Given a string $P$, the \emph{suffix array interval}
+$I^l(P),I^u(P)]$ of $P$ in $T$ is defined as
+\begin{eqnarray*}
+I^l(P)&=&\min\{k:\mbox{$P$ is the prefix of $T_{S(k)}$}\}\\
+I^u(P) &=&\max\{k:\mbox{$P$ is the prefix of $T_{S(k)}$}\}
+\end{eqnarray*}
+For convenience, we also define $I^s(P)=I^u(P)-I^l(P)+1$ as the size of the interval.
+
+The \emph{Burrows-Wheeler Transform}~\citep{Burrows:1994gd}, or \emph{BWT}, of $T$ is a permutation of
+symbols in $T$. The BWT string $B$ is computed as $B[i]=T[S(i)-1]$ for
+$S(i)>0$ and $B[i]=\mbox{\tt \$}$ otherwise. Given a text $T$, also define
+the accumulative count array $C(a)$ as the number of symbols in $T$ that are
+lexicographically smaller than $a$, and the occurrence array $O(a,i)$ as
+the occurrence of symbols $a$ in $B[0,i]$.
+
+\emph{FM-index}~\citep{DBLP:conf/focs/FerraginaM00} is a compressed representation of the BWT $B$, the occurrence
+array $O(a,i)$ and the suffix array $S(i)$. The key property of FM-index is
+\begin{eqnarray}\label{eq:back}
+I^l(aP)&=&C(a)+O(a,I^l(P)-1)\\
+I^u(aP)&=&C(a)+O(a,I^u(P))-1
+\end{eqnarray}
+and $I^l(aP)\le I^u(aP)$ if and only if $aP$ is a substring of $T$.
+We note that these two equations are different from the ones in our previous
+paper~\citep{Li:2009uq} in that $C(a)$ and $O(a,i)$ defined here include
+the sentinels, but the two arrays in the previous paper exclude them.
+
+Given a collection $T=Q_0 Q_1\ldots Q_{n-1}$, we can retrieve
+sequence $Q_i$ in linear time with Algorithm~1~\citep{DBLP:conf/recomb/MakinenNSV09}.
+The second return value is the rank of $Q_i$ which equals $|\{Q_j:Q_j<Q_i\}|$.
 
 \begin{algorithm}[h]
 \DontPrintSemicolon
@@ -240,7 +349,7 @@ active development.
 \KwIn{Sequence index $i\ge0$}
 \KwOut{Sequence $P$ and $k$, the rank of $P$}
 \BlankLine
-\textbf{Function} {\sc RetrieveSeq}$(i)$
+\textbf{Function} {\sc GetSeq}$(i)$
 \Begin {
 	$k\gets i$\;
 	$P\gets\epsilon$\;
@@ -256,13 +365,45 @@ active development.
 \caption{Sequence retrieval}
 \end{algorithm}
 
+\subsection{FMD-index}
+
+Given DNA text $R_0,\ldots,R_{n-1}$, define $T=R_0\overline{R}_0
+R_1\overline{R}_1\ldots R_{n-1}\overline{R}_{n-1}$ as the
+\emph{bidirectional collection} of the texts. We call the FM-index of $T$ as
+the \emph{FMD-index} of $R_0,\ldots,R_{n-1}$.  Define the \emph{bi-interval} of a
+string $P$ as $[I^l(P),I^l(\overline{P}),I^s(P)]$. We will show how to compute
+the bi-interval of $aP$ and $Pa$ when we know the bi-interval of $P$.
+
+We note that when we know the bi-interval of $P$, $I^l(aP)$ and $I^s(aP)$ can
+be readily computed with Equation~\eqref{eq:back}.
+$[I^l(\overline{aP}),I^u(\overline{aP})]$ is a sub-interval of
+$[I^l(\overline{P}),I^u(\overline{P})]$ because $\overline{P}$ is a prefix
+of $\overline{aP}=\overline{P}\circ\overline{a}$. Due to the innate symmetry
+of $T$, $I^s(\overline{cP})=I^s(cP)$ for all $c\in\Sigma$ with
+$\sum_{c}I^s(cP)=I^s(P)=I^s(\overline{P})$. We can compute $I^s(cP)$ for all $c\in\Sigma$
+with Equation~\eqref{eq:back}, use these interval sizes to divide
+$[I^l(\overline{P}),I^u(\overline{P})]$ and finally derive
+$[I^l(\overline{aP}),I^u(\overline{aP})]$.  This completes the computation of
+the bi-interval of $aP$ (Algorithm~2).  Furthermore, when we backward extend
+$P$, we actually forward extend $\overline{P}$.  Conversely, backward extension
+of $\overline{P}$ yields forward extension of $P$ (Algorithm~3).
+An FMD-index is bidirectional.
+
+In comparison to the bidirectional BWT~\citep{Lam:2009fk} which uses two FM-indices,
+the FMD-index builds both forward and reverse strand DNA sequences in one index.
+Although the FMD-index is not applicable to generic texts, it is conceptually
+more consistent with double-strand DNA and improves the speed of exact matching
+as we only need to search against one index. For example,
+BWA-SW~\citep{Li:2010fk} gets a 80\% speedup when we adopt the FMD-index as the
+data structure.
+
 \begin{algorithm}[h]
 \DontPrintSemicolon
 \footnotesize
-\KwIn{Bi-interval $(k,l,s)$ of string $W$ and a symbol $a$}
+\KwIn{Bi-interval $[k,l,s]$ of string $W$ and a symbol $a$}
 \KwOut{Bi-interval of string $aW$}
 \BlankLine
-\textbf{Function} {\sc BackwardExt}$(a,k,l,s)$
+\textbf{Function} {\sc BackwardExt}$([k,l,s],a)$
 \Begin {
 	\For{$b\gets0$ \KwTo $5$} {
 		$k_b\gets C(b) + O(b,k-1)$
@@ -274,7 +415,7 @@ active development.
 		$l_b\gets l_{b+1}+s_{b+1}$
 	}
 	$l_5\gets l_1+s_1$\;
-	\Return{$(k_a,l_a,s_a)$}
+	\Return{$[k_a,l_a,s_a]$}
 }
 \caption{Backward extension}
 \end{algorithm}
@@ -282,70 +423,96 @@ active development.
 \begin{algorithm}[h]
 \DontPrintSemicolon
 \footnotesize
-\KwIn{Bi-interval $(k,l,s)$ of string $W$ and a symbol $a$}
+\KwIn{Bi-interval $[k,l,s]$ of string $W$ and a symbol $a$}
 \KwOut{Bi-interval of string $Wa$}
 \BlankLine
-\textbf{Function} {\sc ForwardExt}$(a,k,l,s)$
+\textbf{Function} {\sc ForwardExt}$([k,l,s],a)$
 \Begin {
-	$(l',k',s')\gets${\sc BackwardExt}$(\overline{a},l,k,s)$\;
-	\Return{$(k',l',s')$}
+	$[l',k',s']\gets${\sc BackwardExt}$([l,k,s],\overline{a})$\;
+	\Return{$[k',l',s']$}
 }
-%\textbf{Function} {\sc ForwardExt}$(a,k,l,s)$
-%\Begin {
-%	\For{$b\gets0$ \KwTo $5$} {
-%		$l_a\gets C(b) + O(b,l-1)$
-%		$s_a\gets O(b,l+s-1) - O(b,l-1)$
-%	}
-%	$k_0\gets k$\;
-%	$k_4\gets k_0+s_0$\;
-%	\For{$b\gets3$ \KwTo $1$} {
-%		$k_b\gets k_{b+1}+s_{b+1}$
-%	}
-%	$k_5\gets k_1+s_1$\;
-%	$b\gets\overline{a}$\;
-%	\Return{$(k_b,l_b,s_b)$}
-%}
 \caption{Forward extension}
 \end{algorithm}
+
+\subsection{Unitig construction}
+
+\subsubsection{Labeling reads and overlaps}
+Given a bidirectional collection $T=R_0\overline{R}_0\ldots
+R_{n-1}\overline{R}_{n-1}$, fermi labels the $i$-th input read $R_i$ with an
+\emph{ordered} integer pair $[k,l]$, where $k$ is the rank of $R_i$
+and $l$ the rank of $\overline{R}_i$. The pair $[k,l]$ can be computed by
+{\sc GetSeq}$(2i)$ and {\sc GetSeq}$(2i+1)$, respectively. We also call
+$[k,l]$ as the \emph{bi-interval of read} $R_i$. Obviously, the bi-interval
+of read $\overline{R}_i$ is $[l,k]$, with the two integer swapped.
+
+For two reads labeled by $[k,l]$ and $[k',l']$, if the tail (3'-end) of read
+$[k,l]$ overlaps the head (5'-end) of $[k',l']$, we use an \emph{unordered}
+integer pair $\langle l,k'\rangle$ to label the overlap. Such is a tail-to-head
+overlap. Similarly, we keep $\langle l',k\rangle$ for a head-to-tail overlap,
+$\langle l,l'\rangle$ for tail-to-tail and $\langle k,k'\rangle$ for a
+head-to-head overlap. The four types of overlaps correspond to the four
+types of bidirectional edges in the bidirectional overlap
+graph~\citep{Myers:1995nx}.
+
+\subsubsection{Finding irreducible overlaps}
+Finding irreducible overlaps plays a central role in fermi as well as in SGA.
+Given its importance, we present a restructured version of this algorithm
+(SD10;~\citealt{Simpson:2010uq}) using our notations (Algorithm~4).
+
+In Algorithm~4, line 1 computes the bi-interval of a single symbol. The loop at
+line 2 uses backward extensions to find all the reads overlapping with the
+input string $P$. The loop at line 3 uses forward extensions base by base to exclude
+reducible overlaps found at the previous step. $W$ is this loop keeps
+the common substring of reads overlapping $P$ extended from the 3'-end of $P$. If 
+in an iteration we find the sentinel of a read $R$ (line 5), then all the reads sharing
+the same $W$ with $R$ must overlap with both $R$ and $P$ and therefore
+their overlaps with $P$ are reducible. In this case, no further forward
+extensions are necessary (line 4 and 6).
+
+Similar to the original algorithm, Algorithm 4 requires that there are no contained reads.
+Fermi actually implements a modified version that detects reads containment on the fly,
+but we think the algorithm is a little overcomplicated. It is probably easier to
+filter contained reads first and then run Algorithm 4, as SGA does.
 
 \begin{algorithm}[h]
 \DontPrintSemicolon
 \footnotesize
 \KwIn{Read $P$ and the minimum overlap length $x$}
-\KwOut{Array of bi-intervals of reads having irreducible overlaps with the 3'-end of $P$}
+\KwOut{Set of bi-intervals of reads having irreducible overlaps with the 3'-end of $P$}
 \BlankLine
 \textbf{Function} {\sc IrrOverlap}$(P,x)$
 \Begin {
-	\emph{Initialize ${\sf IrrOvlp}$, ${\sf Curr}$ and ${\sf Prev}$ as empty arrays}\;
+	\emph{Initialize ${\sf Curr}$ and ${\sf Prev}$ as empty arrays}\;
 	$a\gets P[|P|-1]$\;
-	\nl$(k,l,s)\gets (C(a), C(\overline{a}), C(a+1) - C(a))$\;
+	\nl$[k,l,s]\gets [C(a), C(\overline{a}), C(a+1) - C(a)]$\;
 	\nl\For{$i\gets |P|-2$ \KwTo $0$} {
 		\If{$|P|-i-1\ge x$} {
-			$(k',l',s')\gets${\sc BackwardExt$(0,k,l,s)$}\;
+			$[k',l',s']\gets${\sc BackwardExt$([k,l,s],0)$}\;
 			\If{$s'\not=0$} {
-				\emph{Append $(k',l',s';i;\epsilon)$ to ${\sf Curr}$}\;
+				\emph{Append $([k',l',s'],\epsilon)$ to ${\sf Curr}$}\;
 			}
 		}
-		$(k,l,s)\gets${\sc BackwardExt$(P[i],k,l,s)$}\;
+		$[k,l,s]\gets${\sc BackwardExt$([k,l,s],P[i])$}\;
 	}
-	\nl\emph{Reverse array ${\sf Curr}$, and swap ${\sf Curr}$ and ${\sf Prev}$}\;
-	\nl${\sf Finished}=\emptyset$\;
+	\emph{Reverse array ${\sf Curr}$, and swap ${\sf Curr}$ and ${\sf Prev}$}\;
+	${\sf Finished}=\emptyset$\;
+	$\mathcal{I}=\emptyset$\;
 	\nl\While{${\sf Prev}$ is not empty} {
 		\emph{Reset ${\sf Curr}$ to empty}\;
-		\For{$(k,l,s;i;W)$ {\bf in} ${\sf Prev}$} {
+		\For{$([k,l,s],W)$ {\bf in} ${\sf Prev}$} {
 			\If{$W\in{\sf Finished}$} {
-				{\bf continue}\;
+				\nl{\bf continue}\;
 			}
-			$(k',l',s')\gets${\sc ForwardExt}$(0,k,l,s)$\;
-			\If{$s'\not=0$} {
+			$[k',l',s']\gets${\sc ForwardExt}$([k,l,s],0)$\;
+			\nl\If{$s'\not=0$} {
 				${\sf Finished}\gets{\sf Finished}\cup \{W\}$\;
-				\emph{Append $(k',l',s';i;W)$ to ${\sf IrrOvlp}$}\;
-				{\bf continue}\;
+				$\mathcal{I}\gets\mathcal{I}\cup\{[k',l',s']\}$\;
+				\nl{\bf continue}\;
 			}
 			\For{$a\gets1$ \KwTo $5$} {
-				$(k',l',s')\gets${\sc ForwardExt}$(a,k,l,s)$\;
-				\If{$s'\not=0$} {
-					\emph{Append $(k',l',s';Wa)$ to ${\sf Curr}$}\;
+				$[k',l',s']\gets${\sc ForwardExt}$([k,l,s],a)$\;
+				\If{$s'\not=0$ {\bf and} $[k',l',s']$ is not in ${\sf Curr}$} {
+					\emph{Append $([k',l',s'],Wa)$ to ${\sf Curr}$}\;
 				}
 			}
 		}
@@ -356,6 +523,30 @@ active development.
 \caption{Finding irreducible overlaps (SD10)}
 \end{algorithm}
 
+\subsubsection{Unitig construction}
+
+Unitig construction is a process of unambiguous merge of overlapped reads.
+If $[k,l]$ and $[k',l']$ have an irreducible overlap $\langle l,k'\rangle$ and
+can be unambiguously merged, we label the merged sequence with $[k,l']$; the
+similar can be applied to other three types of overlaps.  With this simple
+labeling procedure, we are able to fully keep track of the graph topology
+during the unitig construction and without staging the graph in RAM.  This
+procedure can also be easily multi-threaded.
+
+\subsection{Finding the supermaximal exact matches}
+
+An FMD-index can be used to find \emph{supermaximal exact matches} (SMEMs)
+between a reference and a query sequence. Formally, a \emph{maximal exact
+match} (MEM) is a an exact match that cannot be extended in either direction of
+the match. An SMEM is a MEM that is not contained in other MEMs on the query
+sequence. Fermi uses SMEMs to map reads back to the unitigs. 
+
+Algorithm~5 describes the details. Basically, we use forward-backward extension
+to extend an exact match and detect the boundary of a maximal match by tracking
+the change of interval sizes. Fermi implements a variant of Algorithm~5. It
+finds full-length read matches and can optionally exclude matches identical to
+the query sequence.
+
 \begin{algorithm}[h]
 \DontPrintSemicolon
 \footnotesize
@@ -365,37 +556,37 @@ active development.
 \textbf{Function} {\sc SuperMEM1}$(P,x)$
 \Begin {
 	\emph{Initialize ${\sf Curr}$, ${\sf Prev}$ and ${\sf Match}$ as empty arrays}\;
-	\nl$(k,l,s)\gets (C(P[i_0]), C(\overline{P[i_0]}), C(P[i_0]+1) - C(P[i_0]))$\;
-	\nl\For{$i\gets i_0+1$ \KwTo $|P|$} {
+	$[k,l,s]\gets [C(P[i_0]), C(\overline{P[i_0]}), C(P[i_0]+1) - C(P[i_0])]$\;
+	\For{$i\gets i_0+1$ \KwTo $|P|$} {
 		\If{$i=|P|$} {
-			\emph{Append $(k,l,s)$ to ${\sf Curr}$}
+			\emph{Append $[k,l,s]$ to ${\sf Curr}$}
 		} \Else {
-			$(k',l',s')\gets${\sc ForwardExt$(P[i],k,l,s)$}\;
-			\nl\If{$s'\not=s$} {
-				\emph{Append $(k,l,s)$ to ${\sf Curr}$}
+			$[k',l',s']\gets${\sc ForwardExt$([k,l,s],P[i])$}\;
+			\If{$s'\not=s$} {
+				\emph{Append $[k,l,s]$ to ${\sf Curr}$}
 			}
 			\If{$s'=0$} {
 				{\bf break}\;
 			}
-			$(k,l,s)\gets(k',l',s')$
+			$[k,l,s]\gets[k',l',s']$
 		}
 	}
 	\emph{Swap array ${\sf Curr}$ and ${\sf Prev}$}\;
 	$i'\gets |P|$\;
-	\nl\For{$i\gets i_0-1$ \KwTo $-1$} {
+	\For{$i\gets i_0-1$ \KwTo $-1$} {
 		\emph{Reset ${\sf Curr}$ to empty}\;
 		$s''\gets -1$\;
-		\For{$(k,l,s)$ {\bf in} ${\sf Prev}$}{
-			$(k',l',s')\gets${\sc BackwardExt$(P[i],k,l,s)$}\;
-			\nl\If{$s' = 0$ {\bf or} $i = -1$} {
-				\nl\If{${\sf Curr}$ is empty {\bf and} $i+1<i'+1$} {
+		\For{$[k,l,s]$ {\bf in} ${\sf Prev}$}{
+			$[k',l',s']\gets${\sc BackwardExt$([k,l,s],P[i])$}\;
+			\If{$s' = 0$ {\bf or} $i = -1$} {
+				\If{${\sf Curr}$ is empty {\bf and} $i+1<i'+1$} {
 					$i'\gets i$\;
-					\emph{Append $(k,l,s)$ to ${\sf Match}$}
+					\emph{Append $[k,l,s]$ to ${\sf Match}$}
 				}
 			}
-			\nl\If{$s'\not=0$ {\bf and} $s'\not=s''$} {
+			\If{$s'\not=0$ {\bf and} $s'\not=s''$} {
 				$s''\gets s'$\;
-				\emph{Append $(k,l,s)$ to ${\sf Curr}$}
+				\emph{Append $[k,l,s]$ to ${\sf Curr}$}
 			}
 		}
 		\If{${\sf Curr}$ is empty} {
@@ -408,53 +599,108 @@ active development.
 \caption{Finding super-maximal exact matches}
 \end{algorithm}
 
-\begin{algorithm}[h]
-\DontPrintSemicolon
-\footnotesize
-\KwIn{FM-index and the minimum overlap length $x$}
-\KwOut{Unitig graph $G=(V,E)$}
-\BlankLine
-\textbf{Function} {\sc Unitig}$(V,E,x,i)$
-\Begin {
-	\textbf{Function} {\sc SemiExt$(P,k,x)$}
-	\Begin {
-		\While{\bf true} {
-			${\sf IrrOvlp}\gets${\sc IrrOverlap}$(P,x)$\;
-			\If{${\sf \#IrrOvlp}=1$} {
-				$(k',l',s';i;W)\gets{\sf IrrOvlp}[1]$\;
-				${\sf IrrOvlp}'\gets${\sc IrrOverlap}$(\overline{P_i\circ W},x)$\;
-				\If{${\sf \#IrrOvlp}'=1$} {
-					$P\gets P\circ W$\;
-					$k\gets l'$\;
-					{\bf continue}\;
-				}
-			}
-			\For{$(k',l',s';i;W)$ {\bf in} ${\sf IrrOvlp}$} {
-				$E\gets E\cup \{(k,k')\}$
-			}
-			\Return{$(P,k)$}
-		}
-	}
-	\BlankLine
-	$(P,k)\gets${\sc RetrieveSeq}$(i)$\;
-	$(P',k')\gets${\sc RetrieveSeq}$(i+1)$\;
-	$(P,k')\gets${\sc SemiExt}$(P,k',x)$\;
-	$(P,k)\gets${\sc SemiExt}$(\overline{P},k,x)$\;
-	$V\gets V\cup\{(k',k;P)\}$
-}
-\caption{Backward extension}
-\end{algorithm}
+\subsection{Other implementation details}
+
+\subsubsection{Constructing FM-index}
+To compute suffix arrays for strings with multiple sentinels, we modified an
+optimized implementation of the SA-IS algorithm~\citep{G.-Nong:2011fk} by Yuta
+Mori.  We used the established algorithm to merge BWTs of subsets of
+reads~\citep{DBLP:journals/algorithmica/HonLSSY07,en:2009fk,DBLP:conf/latin/FerraginaGM10}.
+The BWT string is run-length encoded with the length in the delta
+encoding~\citep{Elias:1975ly}.
+
+\subsubsection{Error correction}
+Fermi corrects potential sequencing errors using an algorithm similar to
+solving the spectrum alignment problem~\citep{Pevzner:2001vn}, correcting
+bases in underrepresented $k$-mers. It also shares similarity to
+HiTEC~\citep{Ilie:2011fk}. Nonetheless, the fermi's algorithm differs in that
+it is quality aware and does not replies on a user defined threshold on the
+$k$-mer occurrences.
+
+Fermi corrects errors in two phases. In the first phase, it collect all 23-mer
+occurring 3 or more times using a top-down traversal over the trie represented
+by the FMD-index. For each such 23-mer, fermi counts the occurrences of
+the next (i.e. the 24-th) base and stores the information in a hash table
+with the 23-mer being the key. In the second phase, fermi processes each read
+by using the 23-mer hash table to correct errors by minimizing a heuristic cost
+function of base quality and the occurrences of the 24-th base. Roughly
+speaking, fermi tries to correct a low-quality base if by looking up its 23-mer
+prefix we know the base is different from an overwhelmingly frequent 24-th base.
+This algorithm can be adapted to correct INDEL sequencing errors in principle,
+but more works are needed to perform minimization efficiently.
+
+\subsubsection{Using the paired-end information}
+Fermi records the read positions on the unitigs during the unitig construction.
+It collects the mates of unpaired reads towards the end of a unitig and
+performs a local assembly on these read pairs. The resulting contigs may extend
+the unitigs because a repeat shorter than the insert size may be resolved.
+Fermi then treats these contigs as longer reads, mixes them with raw reads and
+perform another unitig construction. The contiguity of unitigs after the second
+round can usually be improved and sometimes dramatically.
+
+Fermi also uses read pairs to break unitigs at positions which are not bridged
+by any read pairs. Fermi has high misassembly rate for unknown reasons, but
+after this procedure, the misassembly rate is similar to other de novo
+assemblers.
 
 \end{methods}
 
 \section{RESULTS}
 
-\subsection{Implementation}
-We implemented a new de novo assembler, fermi, with a particular emphasis on
-preserving short variants. It is designed to take advantage of multiple
-processors of a machine with large shared memory.
+We evaluated Fermi on 101bp paired-end reads from NA12878~\citep{Depristo:2011vn}.
+The total coverage of the original data is about 70-fold, but we only used half
+of data.
 
-\subsection{Evaluated call sets}
+\subsection{Performance on de novo assembly}
+We obtained the ALLPATHS-LG NA12878 contigs from NCBI (AC:AEKP01000000) and
+the SGA and SOAPdenovo scaffolds used by~\citet{Simpson:2011ly} from
+\mbox{http://bit.ly/jts12878}. For comparison with traditional capillary
+assembly, we also downloaded the HuRef assembly~\citep{Levy:2007uq}. For the
+SGA and SOAPdenovo scaffolds, we split at any ambiguous bases to get contigs;
+for the HuRef assembly, we split at contiguous 'N' longer than 20bp.
+
+\begin{table}[!htb]
+\processtable{Statistics on human whole-genome assemblies}
+{\begin{tabular}{lrrrrr}
+\toprule
+& AllPaths-LG & fermi & SGA & SOAP & HuRef \\
+\midrule
+Raw contig bases & 2.61G & 2.92G & 2.76G & 2.88G & 2.81G \\
+Aligned contig bases & 2.61G & 2.88G & 2.75G & 2.87G & 2.81G \\
+Aligned N50 & 23.8k & 11.3k & 9.9k & 6.6k & 103.4k \\
+Covered ref. bases & 2.59G & 2.75G & 2.70G & 2.73G & 2.78G \\
+\# break points & 6,511 & 3,173 & 2,997 & 1,960 & 9,174 \\
+\# $[300,350]$ bp del. & 2,370 & 678 & 777 & 427 & 1,075 \\
+\# $[300,350]$ bp ins. & 170 & 60 & 57 & 81 & 752 \\
+\botrule
+\end{tabular}}{Contigs are aligned to the human reference genome GRCh37 with
+BWA-SW. A break point is detected if a contig is split and mapped to two
+distict locations and at each location the alignment is longer than 200bp and
+the mapping quality is no less than 10.}
+\end{table}
+
+From Table~2, we can see that the HuRef assembly has much better
+contiguity than the other four assemblies from short reads. It contains more
+assembly break points, but they are not necessarily misassemblies. ALLPATHS-LG
+has longer N50 than Fermi, SGA and SOAPdenovo partly because it uses 100-fold
+data and reads from jumping libraries. However, the number of long deletions
+ranged from 300bp to 350bp, which is about the length of an Alu element, is
+spuriously high. This might indicate potential misassemblies around Alu
+repeats. ALLPATHS-LG alignment also reveals highly enriched 135bp INDELs, which
+is not seen in other assemblies.
+
+Between fermi, SGA and SOAPdenovo which are applied on the same data set,
+fermi has slightly longer N50 and also slightly more assembly break points.
+It appears to cover more bases in the human reference genome but we note that
+it also has the highest fraction of unmapped bases, which might indicate that
+it contains more erroneous reads. In all, the quality of the fermi assembly
+is roughly comparable to the SGA assembly.
+
+\subsection{Performance on SNP and INDEL calling}
+
+One of the key motivations of fermi is to explore the power of de novo assembly
+in calling short variants. We collected several SNP and INDEL call sets (Table~3)
+and compared the performance of fermi (Table~4 and 5).
 
 \begin{table}[!htb]
 \processtable{Evaluated SNP and INDEL call sets}
@@ -463,43 +709,58 @@ processors of a machine with large shared memory.
 Label & Data & Assembler & Mapper & Caller \\
 \midrule
 AS & 96X Illumina PE$^1$ & AllPaths-LG & BWA-SW$^2$ & SAMtools$^3$ \\
-BS & 60X Illumina PE & & BWA$^4$ & SAMtools \\
-CG & Complete Genomics& & cgatools2$^5$ & cgatools2 \\
+BS & 70X Illumina PE & & BWA$^4$ & SAMtools \\
+CG & Complete Genom.& & cgatools2$^5$ & cgatools2 \\
 CV & 26X Illumina SE$^6$ & Cortex & & Cortex-var \\
-FS & 30X Illumina SE$^6$ & fermi & BWA-SW$^2$ & SAMtools$^3$ \\
+FS & 35X Illumina SE$^6$ & fermi & BWA-SW$^2$ & SAMtools$^3$ \\
 MD & 60X multiple        & & MAQ & 1000g pilot$^7$ \\
-SS & 30X Illumina SE$^6$ & & BWA-SW & SAMtools \\
-TS & 30X Illumina SE$^6$ & & Bowtie2 & SAMtools \\
+SS & 35X Illumina SE$^6$ & & BWA-SW & SAMtools \\
 \botrule
 \end{tabular}}{
 $^1$ AS uses reads from Illumina jumping and fosmid libraries\\
 $^2$ BWA-SW is invoked with `bwa bwasw -b9 -q16 -r1 -w500'\\
 $^3$ INDELs are called from pileup without going through the SAMtools caller\\
 $^4$ Realigned by GATK~\citep{Depristo:2011vn} also around known INDELs\\
-$^5$ Only `VQHIGH' calls are retained\\
-$^6$ CV, FS, SS and TS do not use the pairing information in calling\\
+$^5$ By Complete Genomics~\citep{Drmanac:2010ly}; only `VQHIGH' calls retained\\
+$^6$ CV, FS and SS do not use the pairing information in calling\\
 $^7$ 1000 Genomes Project pilot calls; generated from Dindel and multiple SNP callers\\
 }
 \end{table}
 
-\subsection{Performance on SNP calling}
-
 \begin{table}[!htb]
 \processtable{Statistics of SNP call sets}
-{\begin{tabular}{p{1.5cm}rrrrrrr}
+{\begin{tabular}{p{2.3cm}rrrrrrr}
 \toprule
-& FS & CV & SS & TS & BS & CG & MD \\
+& FS & CV & SS & BS & CG & MD \\
 \midrule
-\#SNPs (M) & 3.37 & 2.20 & 3.24 & 3.34 & 3.50 & 3.34 & 2.69\\
-\#hets (M) & 1.96 & 1.04 & 1.94 & 1.99 & 2.11 & 2.04 & 1.65\\
-ts/tv      & 2.04 & 2.03 & 2.08 & 2.09 & 2.11 & 2.12 & 2.06\\
-DN50 (bp)  & 3,602& 6,662& 3,523& 3,428& 3,392& 3,447&3,992\\
-DN2/DN50   & 22.1 & 20.8 & 23.4 & 21.8 & 22.7 & 22.3 & 22.9\\
+\#SNPs (M) & 3.37 & 2.20 & 3.24 & 3.50 & 3.34 & 2.69\\
+\#hets (M) & 1.96 & 1.04 & 1.94 & 2.11 & 2.04 & 1.65\\
+ts/tv      & 2.04 & 2.03 & 2.08 & 2.11 & 2.12 & 2.06\\
+DN50 (bp)  & 3,602& 6,662& 3,523& 3,392& 3,447&3,992\\
+DN2/DN50   & 22.1 & 20.8 & 23.4 & 22.7 & 22.3 & 22.9\\
 \botrule
-\end{tabular}}{}
+\end{tabular}}{Ts/tv is the transition-to-transversion ratio of SNPs. DN50 is
+calculated as follows. The reference genome is masked according to the
+align-ability mask~(http://bit.ly/snpable) and segmented into intervals at
+heterozygous SNPs. DN50 is computed such as 50\% of unique positions in the
+genome are in intervals longer than DN50. DN2 is calculated similarly and
+D2/DN50 is the ratio of DN2 and DN50. DN50 measures the sensitivity and
+DN2/DN50 measures the precision of heterozygous SNPs. The higher the better.}
+
 \end{table}
 
-\subsection{Performance on INDEL calling}
+For SNP calling (Table~4), fermi cannot make use of the pairing information. It
+misses 3\% of SNPs called in SS, but finds more. Manual examination reveals that
+the additional calls are mainly caused by two factors. Firstly, in the
+single-end mode, BWA-SW is very conservative. It may consistently give a
+correct alignment a low mapping quality. Fermi is able to assemble such reads into
+longer sequences which increase the power of BWA-SW. Secondly, in the fermi
+alignment, some regions may be mapped with a high mismatching rate.  These may
+be due to small-scale misassemblies in fermi unitigs or in the reference
+assembly, or copy-number variations. It is possible that these clustered
+SNPs contain more errors. Such errors may lead to reduced ts/tv, but tend
+not to break long homozygous blocks due to very recent coalescences. That
+is why the DN2/DN50 ratio of FS remains high.
 
 %         FS     CV     SS     BS     CG     MD     AS   sum1   sum2   sum3
 % ------------------------------------------------------------------
@@ -535,27 +796,9 @@ itself. The similar is true for the `\mbox{SS+BS+CG+MD+FS}' and the
 `\mbox{SS+BS+CG+MD+FS+CV+AS}' columns. In the table, a number on the diagonal equals $|R|$,
 the number of INDEL calls in the call set. The fraction equals $|\{g\in R:g
 \mbox{ is found in } C\}|/|R|$.}
-
 \end{table*}
 
-\subsection{Performance on de novo assembly}
-
-\begin{table}[!htb]
-\processtable{Statistics on human whole-genome assemblies}
-{\begin{tabular}{lrrrrr}
-\toprule
-& AllPaths & fermi & SGA & SOAP & HuRef \\
-\midrule
-Raw contig bases & 2.61G & 2.92G & 2.76G & 2.88G & 2.81G \\
-Aligned contig bases & 2.61G & 2.88G & 2.75G & 2.87G & 2.81G \\
-Aligned N50 & 23.8k & 11.3k & 9.9k & 6.6k & 103.4k \\
-Covered ref. bases & 2.59G & 2.75G & 2.70G & 2.73G & 2.78G \\
-\# break points & 6,511 & 3,173 & 2,997 & 1,960 & 9,174 \\
-\# $[300,350]$ bp del. & 2,370 & 678 & 777 & 427 & 1,075 \\
-\# $[300,350]$ bp ins. & 170 & 60 & 57 & 81 & 752 \\
-\botrule
-\end{tabular}}{}
-\end{table}
+For INDEL calling, 
 
 \section*{ACKNOWLEDGEMENTS}
 
