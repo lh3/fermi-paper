@@ -629,19 +629,20 @@ prefix we know the base is different from an overwhelmingly frequent 24-th base.
 This algorithm can be adapted to correct INDEL sequencing errors in principle,
 but more works are needed to perform minimization efficiently.
 
-\subsubsection{Using the paired-end information}
-Fermi records the read positions on the unitigs during the unitig construction.
-It collects the mates of unpaired reads towards the end of a unitig and
-performs a local assembly on these read pairs. The resulting contigs may extend
-the unitigs because a repeat shorter than the insert size may be resolved.
-Fermi then treats these contigs as longer reads, mixes them with raw reads and
-perform another unitig construction. The contiguity of unitigs after the second
-round can usually be improved and sometimes dramatically.
+\subsubsection{Detecting complex bubbles}
+Different from many other short-read assemblers that use a modified Dijkstra's
+algorithm to detect bubbles, fermi effectively performs topological sorting
+from the end of a vertex while keeping track of the top two paths containing
+most reads. A bubble is detected when every path ends at a single vertex both
+forwardly and backwardly.
 
-Fermi also uses read pairs to break unitigs at positions which are not bridged
-by any read pairs. Fermi has high misassembly rate for unknown reasons, but
-after this procedure, the misassembly rate is similar to other de novo
-assemblers.
+\subsubsection{Scaftigging}
+Given paired-end reads with short-insert sizes, fermi maps reads back to the
+unitigs with Algorithm~5. If two unitigs are linked by at least five read
+pairs, fermi will locally assemble the ends of unitigs together with unpaired
+reads pointing to the gap under a relax setting. Fermi also tries to align the
+ends of unitigs using the Smith-Waterman algorithm, which may reveal imperfect
+overlaps caused by sequencing errors or heterozygotes.
 
 \end{methods}
 
@@ -657,7 +658,7 @@ the SGA and SOAPdenovo scaffolds used by~\citet{Simpson:2011ly} from
 \mbox{http://bit.ly/jts12878}. For comparison with traditional capillary
 assembly, we also downloaded the HuRef assembly~\citep{Levy:2007uq}. For the
 SGA and SOAPdenovo scaffolds, we split at any ambiguous bases to get contigs;
-for the HuRef assembly, we split at contiguous 'N' longer than 20bp.
+for the HuRef assembly, we split at contiguous `N' longer than 20bp.
 
 \begin{table}[!htb]
 \processtable{Statistics on human whole-genome assemblies}
@@ -665,36 +666,29 @@ for the HuRef assembly, we split at contiguous 'N' longer than 20bp.
 \toprule
 & AllPaths-LG & fermi & SGA & SOAP & HuRef \\
 \midrule
-Raw contig bases & 2.61G & 2.92G & 2.76G & 2.88G & 2.81G \\
-Aligned contig bases & 2.61G & 2.88G & 2.75G & 2.87G & 2.81G \\
-Aligned N50 & 23.8k & 11.3k & 9.9k & 6.6k & 103.4k \\
-Covered ref. bases & 2.59G & 2.75G & 2.70G & 2.73G & 2.78G \\
-\# break points & 6,511 & 3,173 & 2,997 & 1,960 & 9,174 \\
-\# $[300,350]$ bp del. & 2,370 & 678 & 777 & 427 & 1,075 \\
-\# $[300,350]$ bp ins. & 170 & 60 & 57 & 81 & 752 \\
+Aligned contig bases & 2.62G & 2.82G & 2.74G & 2.71G & 2.88G \\
+Aligned N50          & 22.6k & 15.6k & 9.8k  & 7.0k  & 81.4k \\
+Covered ref. bases   & 2.59G & 2.74G & 2.70G & 2.67G & 2.78G \\
+\# Type-1 breaks & 13,738 & 5,704 & 6,049 & 4,962 & 16,318 \\
+\# Type-2 breaks & 3,823 & 1,120 & 1,735 & 727 & 6,626 \\
 \botrule
-\end{tabular}}{Contigs are aligned to the human reference genome GRCh37 with
-BWA-SW. A break point is detected if a contig is split and mapped to two
-distict locations and at each location the alignment is longer than 200bp and
-the mapping quality is no less than 10.}
-\end{table}
+\end{tabular}}{Contigs over 150bp in length are aligned to the human reference
+genome GRCh37 with BWA-SW using option `-b33 -q50 -r17'. A type-1 break point
+is detected if a contig is split and mapped to two distict locations and at
+each location the alignment is longer than 500bp and the mapping quality is no
+less than 10. A type-2 break point further excludes gaps no longer than 500bp.} \end{table}
 
 From Table~2, we can see that the HuRef assembly has much better
 contiguity than the other four assemblies from short reads. It contains more
 assembly break points, but they are not necessarily misassemblies. ALLPATHS-LG
 has longer N50 than Fermi, SGA and SOAPdenovo partly because it uses 100-fold
-data and reads from jumping libraries. However, the number of long deletions
-ranged from 300bp to 350bp, which is about the length of an Alu element, is
-spuriously high. This might indicate potential misassemblies around Alu
-repeats. ALLPATHS-LG alignment also reveals highly enriched 135bp INDELs, which
-is not seen in other assemblies.
-
-Between fermi, SGA and SOAPdenovo which are applied on the same data set,
-fermi has slightly longer N50 and also slightly more assembly break points.
-It appears to cover more bases in the human reference genome but we note that
-it also has the highest fraction of unmapped bases, which might indicate that
-it contains more erroneous reads. In all, the quality of the fermi assembly
-is roughly comparable to the SGA assembly.
+data and reads from jumping libraries. However, the ALLPATHS-LG assembly covers
+fewer reference bases and yields over twice as many as break points than the
+other short-read assemblies. ALLPATHS-LG alignment also reveals highly enriched
+135bp INDELs, which is not seen in other assemblies. Between fermi, SGA and
+SOAPdenovo which are applied on the same data set, fermi has longer N50 with
+similar number of alignment break points. Overall, fermi achieves comparable
+assembly quality to other assemblers.
 
 \subsection{Performance on SNP and INDEL calling}
 
@@ -708,11 +702,11 @@ and compared the performance of fermi (Table~4 and 5).
 \toprule
 Label & Data & Assembler & Mapper & Caller \\
 \midrule
-AS & 96X Illumina PE$^1$ & AllPaths-LG & BWA-SW$^2$ & SAMtools$^3$ \\
+AC & 96X Illumina PE$^1$ & AllPaths-LG & BWA-SW$^2$ & Counting$^3$ \\
 BS & 70X Illumina PE & & BWA$^4$ & SAMtools \\
 CG & Complete Genom.& & cgatools2$^5$ & cgatools2 \\
 CV & 26X Illumina SE$^6$ & Cortex & & Cortex-var \\
-FS & 35X Illumina SE$^6$ & fermi & BWA-SW$^2$ & SAMtools$^3$ \\
+FC & 35X Illumina SE$^6$ & fermi & BWA-SW$^2$ & Counting \\
 MD & 60X multiple        & & MAQ & 1000g pilot$^7$ \\
 SS & 35X Illumina SE$^6$ & & BWA-SW & SAMtools \\
 \botrule
@@ -734,18 +728,19 @@ $^7$ 1000 Genomes Project pilot calls; generated from Dindel and multiple SNP ca
 & FS & CV & SS & BS & CG & MD \\
 \midrule
 \#SNPs (M) & 3.37 & 2.20 & 3.24 & 3.50 & 3.34 & 2.69\\
-\#hets (M) & 1.96 & 1.04 & 1.94 & 2.11 & 2.04 & 1.65\\
+\#hets (M) & 1.97 & 1.04 & 1.94 & 2.11 & 2.04 & 1.65\\
 ts/tv      & 2.04 & 2.03 & 2.08 & 2.11 & 2.12 & 2.06\\
-DN50 (bp)  & 3,602& 6,662& 3,523& 3,392& 3,447&3,992\\
-DN2/DN50   & 22.1 & 20.8 & 23.4 & 22.7 & 22.3 & 22.9\\
+DN50 (bp)  & 3,593& 6,662& 3,523& 3,392& 3,447&3,992\\
+DN2/DN50   & 22.3 & 20.8 & 23.4 & 22.7 & 22.3 & 22.9\\
 \botrule
 \end{tabular}}{Ts/tv is the transition-to-transversion ratio of SNPs. DN50 is
 calculated as follows. The reference genome is masked according to the
 align-ability mask~(http://bit.ly/snpable) and segmented into intervals at
 heterozygous SNPs. DN50 is computed such as 50\% of unique positions in the
 genome are in intervals longer than DN50. DN2 is calculated similarly and
-D2/DN50 is the ratio of DN2 and DN50. DN50 measures the sensitivity and
-DN2/DN50 measures the precision of heterozygous SNPs. The higher the better.}
+D2/DN50 is the ratio of DN2 and DN50. DN50 measures the sensitivity; the
+smaller the better.  DN2/DN50 measures the precision of heterozygous SNPs; the
+higher the better.}
 
 \end{table}
 
@@ -772,18 +767,29 @@ is why the DN2/DN50 ratio of FS remains high.
 % MD  219497 163070 220968 225339 196936 240424 149753 231786 234230 235027
 % AS  231508 143791 200100 227719 160311 151455 323423 242816 253042 253358
 
+%         MD     CG     BS     CV     FC      AC    MI    all
+% -----------------------------------------------------------
+% MD  240424 196936 225339 163070 220789  149753 12277 234980
+% CG  199071 264696 242198 166611 239756  161052 12721 255693
+% BS  228431 241722 404646 201341 336666  229152 18889 367918
+% CV  178131 182752 222029 251769 221417  164424 12859 232705
+% FC  224877 240390 339751 200025 394223  242182 18513 374493
+% AC  151455 160311 227719 151455 237958  323423 13894 256010
+% MI   13037  13229  20078  11847  19310   14884 35985  22134
+
 \begin{table*}[!htb]
 \processtable{Fraction of INDELs found in other call sets\label{tab:indel}}
-{\begin{tabular*}{\textwidth}{@{\extracolsep{\fill}}lrrrrrrrrr}
+{\begin{tabular*}{\textwidth}{@{\extracolsep{\fill}}lrrrrrrrr}
 \toprule
-&FS&CV&SS&BS&CG&MD&SS+BS+CG+MD&SS+BS+CG+MD+FS&SS+BS+CG+MD+FS+CV+AS\\
+   &      MD &      CG &      BS &      CV &      FC &      AC &      MI &     all \\
 \midrule
-FS&383,078& 0.518 & 0.772 & 0.868 & 0.620 & 0.583 & 0.921 &       & 0.951\\
-CV& 0.873 &251,769& 0.826 & 0.882 & 0.726 & 0.708 & 0.910 & 0.921 & 0.923\\
-SS& 0.908 & 0.592 &322,095& 0.962 & 0.692 & 0.692 & 0.974 & 0.990 & 0.991\\
-BS& 0.816 & 0.498 & 0.772 &404,646& 0.597 & 0.564 & 0.831 & 0.899 & 0.920\\
-CG& 0.896 & 0.629 & 0.846 & 0.915 &264,696& 0.752 & 0.937 & 0.958 & 0.965\\
-MD& 0.913 & 0.678 & 0.919 & 0.937 & 0.819 &240,424& 0.964 & 0.974 & 0.978\\
+MD & 240,424 &   0.819 &   0.937 &   0.678 &   0.918 &   0.623 &   0.051 &   0.977 \\
+CG &   0.752 & 264,696 &   0.915 &   0.629 &   0.906 &   0.608 &   0.048 &   0.966 \\
+BS &   0.564 &   0.597 & 404,646 &   0.498 &   0.832 &   0.566 &   0.047 &   0.909 \\
+CV &   0.708 &   0.726 &   0.882 & 251,769 &   0.879 &   0.653 &   0.051 &   0.924 \\
+FC &   0.570 &   0.610 &   0.862 &   0.507 & 394,223 &   0.614 &   0.047 &   0.950 \\
+AC &   0.468 &   0.496 &   0.704 &   0.468 &   0.736 & 323,423 &   0.043 &   0.792 \\
+MI &   0.362 &   0.368 &   0.558 &   0.329 &   0.537 &   0.414 &  35,985 &   0.615 \\
 \botrule
 \end{tabular*}}
 {INDELs that start within a homopolymer run longer than 6bp are excluded in
