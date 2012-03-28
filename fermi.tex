@@ -268,7 +268,6 @@ $|T|$ & Length of $T$ including sentinels: $|T|=n$\\
 $T[i]$ & The $i$-th symbol in string $T$: $T[i]=a_i$\\
 $T[i,j]$ & Substring: $T[i,j]=a_i\ldots a_j$\\
 $T_i$ & Suffix: $T_i=T[i,n-1]$\\
-$S'$ & Inverse suffix array: $S'(i)=|\{j:T_j<T_i\}|$\\
 $S$ & Suffix array; $S(i)$ is the position of the $i$-th smallest suffix\\
 $B$ & BWT: $B[i]=T[S(i)-1]$ if $S(i)>0$ or $B[i]=\$$ otherwise\\
 $C(a)$ & Accumul. count array: $C(a)=|\{0\le i\le n-1:T[i]<a\}|$ \\
@@ -315,8 +314,7 @@ We regard the complement of `{\tt \$}' and `{\tt N}' is identical to itself.
 
 The \emph{suffix array} $S$ of text $T$ is a permutation of integers between 0 and
 $|T|-1$, where $S(i)$, $0\le i<|T|$, is the position of the $i$-th smallest
-suffix of $T$. $S$ is inversible. The inverse of $S$ is call the \emph{inverse
-suffix array} denoted by $S'$. Given a string $P$, the \emph{suffix array interval}
+suffix of $T$. Given a string $P$, the \emph{suffix array interval}
 $I^l(P),I^u(P)]$ of $P$ in $T$ is defined as
 \begin{eqnarray*}
 I^l(P)&=&\min\{k:\mbox{$P$ is the prefix of $T_{S(k)}$}\}\\
@@ -370,10 +368,10 @@ The second return value is the rank of $Q_i$ which equals $|\{Q_j:Q_j<Q_i\}|$.
 
 \subsection{FMD-index}
 
-Given DNA text $R_0,\ldots,R_{n-1}$, define $T=R_0\overline{R}_0
+Given DNA texts $R_0,\ldots,R_{n-1}$, define $T=R_0\overline{R}_0
 R_1\overline{R}_1\ldots R_{n-1}\overline{R}_{n-1}$ as the
 \emph{bidirectional collection} of the texts. We call the FM-index of $T$ as
-the \emph{FMD-index} of $R_0,\ldots,R_{n-1}$.  Define the \emph{bi-interval} of a
+the \emph{FMD-index} of $R_0,\ldots,R_{n-1}$ and define the \emph{bi-interval} of a
 string $P$ as $[I^l(P),I^l(\overline{P}),I^s(P)]$. We will show how to compute
 the bi-interval of $aP$ and $Pa$ when we know the bi-interval of $P$.
 
@@ -451,7 +449,7 @@ of read $\overline{R}_i$ is $[l,k]$, with the two integer swapped.
 For two reads labeled by $[k,l]$ and $[k',l']$, if the tail (3'-end) of read
 $[k,l]$ overlaps the head (5'-end) of $[k',l']$, we use an \emph{unordered}
 integer pair $\langle l,k'\rangle$ to label the overlap. Such is a tail-to-head
-overlap. Similarly, we keep $\langle l',k\rangle$ for a head-to-tail overlap,
+overlap. Similarly, we use $\langle l',k\rangle$ for a head-to-tail overlap,
 $\langle l,l'\rangle$ for tail-to-tail and $\langle k,k'\rangle$ for a
 head-to-head overlap. The four types of overlaps correspond to the four
 types of bidirectional edges in the bidirectional overlap
@@ -606,7 +604,7 @@ the query sequence.
 
 \subsubsection{Constructing FM-index}
 To compute suffix arrays for strings with multiple sentinels, we modified an
-optimized implementation of the SA-IS algorithm~\citep{G.-Nong:2011fk} by Yuta
+optimized implementation of the SA-IS algorithm~\citep{DBLP:journals/tc/NongZC11} by Yuta
 Mori.  We used the established algorithm to merge BWTs of subsets of
 reads~\citep{DBLP:journals/algorithmica/HonLSSY07,en:2009fk,DBLP:conf/latin/FerraginaGM10}.
 The BWT string is run-length encoded with the length in the delta
@@ -647,35 +645,37 @@ complex.
 
 Fermi uses a different algorithm. It effectively performs topological sorting
 from the end of a vertex while keeping track of the top two paths containing
-most reads. A bubble is detected when every path ends at a single vertex both
-forwardly and backwardly. It then drops vertices not on the top two paths and
-thus turns a complex bubble to a simple one.
+most reads. A bubble is detected when every path ends at a single vertex. It
+then drops vertices not on the top two paths and thus turns a complex bubble to
+a simple one.
 
-\subsubsection{Scaftigging}
+\subsubsection{Using the paired-end information}
 Given paired-end reads with short-insert sizes, fermi maps reads back to the
 unitigs with Algorithm~5. If two unitigs are linked by at least five read
 pairs, fermi will locally assemble the ends of unitigs together with unpaired
 reads pointing to the gap under a relax setting. Fermi also tries to align the
 ends of unitigs using the Smith-Waterman algorithm, which may reveal imperfect
-overlaps caused by sequencing errors or heterozygotes.
-
+overlaps caused by sequencing errors or heterozygotes. Fermi also uses
+paired-end reads to break contigs at regions without bridging read pairs. This
+helps to reduce misassemblies during the unitig construction.
 \end{methods}
 
 \section{RESULTS}
 
-We evaluated Fermi on 101bp paired-end reads from NA12878~\citep{Depristo:2011vn}.
+We evaluated fermi on 101bp paired-end reads from NA12878~\citep{Depristo:2011vn}.
 The total coverage of the original data is about 70-fold, but we only used half
-of data.
+of them.
 
 \subsection{Performance on de novo assembly}
-We obtained the ALLPATHS-LG NA12878 contigs from NCBI (AC:AEKP01000000) and the
-SGA and SOAPdenovo scaffolds used by~\citet{Simpson:2011ly} from
-\mbox{http://bit.ly/jts12878}, and the HuRef assembly~\citep{Levy:2007uq} for
+We obtained the ALLPATHS-LG NA12878 contigs from NCBI (AC:AEKP01000000), the
+SGA and SOAPdenovo scaffolds from
+\mbox{http://bit.ly/jts12878}~\citep{Simpson:2011ly}, and the HuRef
+assembly~\citep{Levy:2007uq} for
 the comparison to the traditional capillary assembly. For the SGA and
 SOAPdenovo scaffolds, we split at any ambiguous bases to get contigs; for the
 HuRef assembly, we split at contiguous `N' longer than 20bp.
 
-\begin{table}[!htb]
+\begin{table}[bt]
 \processtable{Statistics on human whole-genome assemblies}
 {\begin{tabular}{lrrrrr}
 \toprule
@@ -694,17 +694,16 @@ each location the alignment is longer than 500bp and the mapping quality is no
 less than 10. A type-2 break point further excludes gaps no longer than 500bp.} \end{table}
 
 From Table~2, we can see that the HuRef assembly has much better
-contiguity than the other four assemblies from short reads. It contains more
+contiguity than short-read assemblies. It contains more
 alignment break points when aligned against the GRCh37, but these are not
-necessarily all misassemblies. ALLPATHS-LG has longer N50 than Fermi, SGA and
+necessarily all misassemblies. ALLPATHS-LG has longer N50 than fermi, SGA and
 SOAPdenovo partly because it uses 100-fold data and reads from jumping
 libraries. However, the ALLPATHS-LG assembly covers fewer reference bases and
-yields over twice as many as break points than the other short-read assemblies.
-ALLPATHS-LG alignment also reveals highly enriched 135bp INDELs, which is not
-seen in other assemblies. Between fermi, SGA and SOAPdenovo which are applied
-on the same data set, fermi has longer N50 with similar number of alignment
-break points. Overall, fermi achieves comparable assembly quality to other
-assemblers.
+yields over twice as many as break points.  ALLPATHS-LG alignment also reveals
+highly enriched 135bp INDELs (data not shown), which is not seen in other
+assemblies. Between fermi, SGA and SOAPdenovo which are applied on the same
+data set, fermi has longer N50 with similar number of alignment break points.
+Overall, fermi achieves comparable assembly quality to other assemblers.
 
 \subsection{Performance on SNP and INDEL calling}
 
@@ -712,7 +711,7 @@ One of the key motivations of fermi is to explore the power of de novo assembly
 in calling short variants. We collected several SNP and INDEL call sets (Table~3)
 and compared the performance of fermi (Table~4 and 5).
 
-\begin{table}[!htb]
+\begin{table}[t]
 \processtable{Evaluated SNP and INDEL call sets}
 {\begin{tabular}{lllll}
 \toprule
@@ -738,11 +737,11 @@ $^7$ 1000 Genomes Project pilot calls; generated from Dindel and multiple SNP ca
 }
 \end{table}
 
-\begin{table}[!htb]
+\begin{table}[b]
 \processtable{Statistics of SNP call sets}
 {\begin{tabular}{p{2.3cm}rrrrrrr}
 \toprule
-& FS & CV & SS & BS & CG & MD \\
+& FC & CV & SS & BS & CG & MD \\
 \midrule
 \#SNPs (M) & 3.37 & 2.20 & 3.24 & 3.50 & 3.34 & 2.69\\
 \#hets (M) & 1.97 & 1.04 & 1.94 & 2.11 & 2.04 & 1.65\\
@@ -761,18 +760,19 @@ higher the better.}
 
 \end{table}
 
-For SNP calling (Table~4), fermi cannot make use of the pairing information. It
-misses 3\% of SNPs called in SS, but finds more. Manual examination reveals that
+For SNP calling (Table~4), fermi misses 3\% of SNPs called in SS,
+but finds more additional ones. Manual examination reveals that
 the additional calls are mainly caused by two factors. Firstly, in the
 single-end mode, BWA-SW is very conservative. It may consistently give a
-correct alignment a low mapping quality. Fermi is able to assemble such reads into
+correct alignment a low mapping quality which are all downweighted by samtools.
+Fermi is able to assemble such reads into
 longer sequences which increase the power of BWA-SW. Secondly, in the fermi
 alignment, some regions may be mapped with a high mismatching rate.  These may
 be due to small-scale misassemblies in fermi unitigs or in the reference
 assembly, or copy-number variations. It is possible that these clustered
 SNPs contain more errors. Such errors may lead to reduced ts/tv, but tend
 not to break long homozygous blocks due to very recent coalescences. That
-is why the DN2/DN50 ratio of FS remains high.
+is why the DN2/DN50 ratio of FC remains high.
 
 Table~5 shows the comparison between different INDEL call sets. We excluded
 INDELs around long homopolymer runs in all call sets because INDEL sequencing
@@ -878,6 +878,8 @@ a number on the diagonal equals $|R|$, the number of INDEL calls in the call
 set. The fraction equals $|\{g\in R:g \mbox{ is found in } C\}|/|R|$.}
 \end{table}
 
+\vspace*{-1em}
+
 \section{Discussions}
 In this article, we derived FMD-index by storing both forward and reverse
 complement DNA sequences in FM-index. This simple modification enables faster
@@ -911,6 +913,11 @@ challenges, such as the high computational cost and the lack of accuracy of
 unitigs, remain at present.
 
 \section*{ACKNOWLEDGEMENTS}
+We are grateful to David Reich and Evan Eichler for providing additional data
+for testing fermi, to Peter Sudmant for offering computing resources and
+to David Altshuler and the Genome Sequence Analyis group for the helpful
+discussions. We also thank Richard Durbin and Jared Simpson for their
+comments on the initial draft of the manuscript.
 
 \paragraph{Funding\textcolon} NIH 1U01HG005208-01.
 \bibliography{fermi}
