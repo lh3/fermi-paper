@@ -45,7 +45,10 @@ similar accuracy for SNP calling and better results for INDEL calling. It has
 higher sensitivity than other de novo assembly based methods for variant
 calling. Our work suggests that variant calling with de novo assembly be a
 beneficial complement to the standard variant calling pipeline for whole-genome
-resequencing.
+resequencing. In the methodological aspects, we proposed FMD-index for
+forward-backward extension of DNA sequences, a fast algorithm for finding
+all super-maximal exact matches and one-pass construction of unitigs
+from an FMD-index.
 
 \section{Availability:} http://github.com/lh3/fermi
 \section{Contact:} hengli@broadinstitute.org
@@ -653,7 +656,7 @@ a simple one.
 Given paired-end reads with short-insert sizes, fermi maps reads back to the
 unitigs with Algorithm~5. If two unitigs are linked by at least five read
 pairs, fermi will locally assemble the ends of unitigs together with unpaired
-reads pointing to the gap under a relax setting. Fermi also tries to align the
+reads pointing to the gap under a relax setting. Fermi tries to align the
 ends of unitigs using the Smith-Waterman algorithm, which may reveal imperfect
 overlaps caused by sequencing errors or heterozygotes. Fermi also uses
 paired-end reads to break contigs at regions without bridging read pairs. This
@@ -689,9 +692,10 @@ Covered ref. bases   & 2.59G & 2.74G & 2.70G & 2.67G & 2.78G \\
 \botrule
 \end{tabular}}{Contigs over 150bp in length are aligned to the human reference
 genome GRCh37 with BWA-SW using option `-b33 -q50 -r17'. A type-1 break point
-is detected if a contig is split and mapped to two distict locations and at
+is detected if a contig is split in alignment and mapped to two distict locations, and at
 each location the alignment is longer than 500bp and the mapping quality is no
-less than 10. A type-2 break point further excludes gaps no longer than 500bp.} \end{table}
+less than 10. Type-2 break points exclude type-1 break points which can be patched
+with gaps no longer than 500bp.} \end{table}
 
 From Table~2, we can see that the HuRef assembly has much better
 contiguity than short-read assemblies. It contains more
