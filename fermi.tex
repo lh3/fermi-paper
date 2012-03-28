@@ -51,6 +51,8 @@ resequencing.
 \section{Contact:} hengli@broadinstitute.org
 \end{abstract}
 
+\vspace*{-1em}
+
 \section{INTRODUCTION}
 
 The rapidly decreasing sequencing cost has enabled whole-genome shotgun (WGS)
@@ -73,10 +75,10 @@ realignment~\citep{Albers:2010ud,Homer:2010kx,Li:2011kx,Depristo:2011vn} and
 local assembly~\citep{Carnevali:2011fk}.  However, because these methods still
 rely on the initial mapping, it is difficult for them to identify and recover
 mismapped or unmapped reads due to high sequence divergence, long INDELs, SVs,
-copy number changes or misassemblies. They have not solved the problem from the
+copy number changes or misassemblies of the reference genome. They have not solved the problem from the
 root.
 
-Another approach to variant calling that fundamentally avoids the flaw of the
+Another distinct approach to variant calling that fundamentally avoids the flaw of the
 mapping based approach is to assemble sequence reads into contigs and to
 discover variants via assembly-to-assemby alignment. It was probably more
 widely used in the era of capillary sequencing. The assembly based method
@@ -87,7 +89,7 @@ between small genomes.
 
 For variant discovery between human genomes, however, the assembly based
 approach has not attracted much attention. Assembling a human genome is far
-more difficult than assembling a bacterial genome, firstly due to the sheer
+more challenging than assembling a bacterial genome, firstly due to the sheer
 size of the genome, secondly to the rich repeats and thirdly due to the
 diploidy of the human genome. Many heuristics effective for assembling small
 genomes are not directly applicable to the human genome assembly. As a result,
@@ -121,6 +123,8 @@ studies~\citep{Iqbal:2012ys}. In addition, the de novo assembly
 algorithm, \emph{fermi}, developed for this practice is also a capable
 assembler for human assembly.
 
+\vspace*{-1em}
+
 \begin{methods}
 \section{METHODS}
 
@@ -151,9 +155,9 @@ concept of \emph{overlap graph}, where a vertex corresponds to a read and a
 bidirectional edge to an overlap. Naively, the DNA assembling problem can be
 cast as finding a path in the overlap graph such that each vertex/read is
 visited exactly once (though edge/overlap caused by repeats are not required to
-be traversed), equivalent to a Hamilton path
-problem~\citep{Compeau:2011fk,Li:2011zr} which is known to be NP-complete. This
-has led many to believe that the OLC approach is theoretically crippled.
+be traversed), equivalent to a Hamilton path problem which is known to be
+NP-complete. This has led many to believe that the OLC approach is
+theoretically crippled.
 
 However, this is a misbelief. Although the assembly problem can be reduced to a
 Hamilton path problem, it can be reduced to other problems as well and in
@@ -189,7 +193,7 @@ applied this procedure to \emph{string graph}, an equivalence to unitig graph.
 also be resolved directly in the bidirectional unitig graph using a bidirected
 network flow-based algorithm.
 
-Once we get a transitively reduced graph, the following steps can be achieved
+Once we get a transitively reduced graph, the subsequent steps can be achieved
 in roughly linear time most of time -- the worst case almost never happens
 globally in practice. However, deriving an overlap graph takes $O(N^2)$ time,
 where $N$ is the number of reads, and transitive reduction takes at least
@@ -199,7 +203,7 @@ assembly where $N$ can be of the order of $10^9$.
 
 A breakthrough achieved by~\citet{Simpson:2010uq} finally solved
 this last remaining problem at least when we only consider exact overlaps.
-These authors developed a $O(N)$ algorithm to find all the irreducible edges,
+These authors developed an $O(N)$ algorithm to find all the irreducible edges,
 effectively replacing the overlapping and transitive reduction phases.
 
 In summary, in the OLC paradigm, the sequence assembly problem can be
@@ -215,13 +219,13 @@ However, de Bruijn is `lossy'. From a theoretical point view, a de Bruijn graph
 is equivalent to an overlap graph built by splitting a long read into overlap
 $k$-mers and requiring ($k$-1)-mer exact overlaps between non-redundant
 $k$-mers.  Such a graph does not have transitive edges. Because long reads all
-effectively work as $k$-bp reads in a de Bruijn graph, longer range information
-is lost and as a result, a path in the graph may be invalidated by reads. In
+effectively work as $k$-bp reads in a de Bruijn graph, long-range information
+is lost. As a result, a path in the graph may be invalidated by reads. In
 contrast, in a unitig graph or equivalently a string graph each path models a
 valid assembly from input reads. \citet{Myers:2005bh} called this property of
 path consistency as \emph{read coherence}.
 
-Losing the long-range information in reads, a de Bruijn graph by itself has
+Losing long-range information in reads, a de Bruijn graph by itself has
 reduced power to resolve short repeats. This flaw is usually amended by mapping
 reads back to the graph and bisecting repeats shorter than the reads, a procedure
 some called as \emph{read threading}. Many de Buijn graph based assemblers
@@ -245,16 +249,15 @@ active development.
 
 \subsection{Rationale}
 Being coherent, a perfectly constructed unitig graph annotated with per-unitig
-read counts in fact encodes all the information in reads. It is theoretically
-possible to apply any read-based analyses to unitigs, including SNP calling,
-short INDEL calling, copy number analyses and structural variantion discovery.
-This is the rationale behind fermi.
+read counts in fact encapsulates all the information of reads and encodes no
+information invalidated by reads. In this sense, any unitig based analysis
+has an equivalent read based analysis, and vice versa. This article just
+uses this property to explore the applications for which we usually rely on
+reads.
 
 \subsection{Strings and FM-index}
 
-Table 1 presents the notations used in this article.
-
-\begin{table}[htb]\label{tab:notation}
+\begin{table}[tb]\label{tab:notation}
 \processtable{Notations}
 {\begin{tabular}{lp{7cm}}
 \toprule
@@ -311,7 +314,7 @@ We regard the complement of `{\tt \$}' and `{\tt N}' is identical to itself.
 \subsubsection{FM-index}
 
 The \emph{suffix array} $S$ of text $T$ is a permutation of integers between 0 and
-$|T|-1$, where $S(i)$, $0\le i<|T|$ is the position of the $i$-th smallest
+$|T|-1$, where $S(i)$, $0\le i<|T|$, is the position of the $i$-th smallest
 suffix of $T$. $S$ is inversible. The inverse of $S$ is call the \emph{inverse
 suffix array} denoted by $S'$. Given a string $P$, the \emph{suffix array interval}
 $I^l(P),I^u(P)]$ of $P$ in $T$ is defined as
