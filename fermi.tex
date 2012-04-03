@@ -42,7 +42,7 @@ reference genome. By applying the method on 35-fold human resequencing data,
 we showed that in comparison to the standard pipeline, our approach yields
 similar accuracy for SNP calling and better results for INDEL calling. It has
 higher sensitivity than other de novo assembly based methods for variant
-calling. Our work suggests that variant calling with de novo assembly be a
+calling. Our work suggests that variant calling with de novo assembly can be a
 beneficial complement to the standard variant calling pipeline for whole-genome
 resequencing. In the methodological aspects, we proposed FMD-index for
 forward-backward extension of DNA sequences, a fast algorithm for finding
@@ -76,9 +76,9 @@ mapping~\citep{Manske:2009ve}, read
 realignment~\citep{Albers:2010ud,Homer:2010kx,Li:2011kx,Depristo:2011vn} and
 local assembly~\citep{Carnevali:2011fk}.  However, because these methods still
 rely on the initial mapping, it is difficult for them to identify and recover
-mismapped or unmapped reads due to high sequence divergence, long INDELs, SVs,
-copy number changes or misassemblies of the reference genome. They have not solved the problem from the
-root.
+mismapped or unmapped reads due to high sequence divergence, long insertions,
+SVs, copy number changes or misassemblies of the reference genome. They have
+not solved the problem from the root.
 
 Another distinct approach to variant calling that fundamentally avoids the flaw of the
 mapping based approach is to assemble sequence reads into contigs and to
@@ -634,7 +634,7 @@ but more works are needed to perform minimization efficiently.
 
 \subsubsection{Simplifying complex bubbles}
 A \emph{bubble} is a directed acyclic subgraph with a single source and a
-single sink with at least two paths between the source and the sink. A
+single sink having at least two paths between the source and the sink. A
 \emph{closed bubble} is a bubble with no incomming edges from or outgoing edges
 to other parts of the entire graph, except at the source and the sink vertices.
 A closed bubble is \emph{simple} if there are exactly two paths between the
@@ -702,17 +702,19 @@ alignment break points when aligned against the GRCh37, but these are not
 necessarily all misassemblies. ALLPATHS-LG has longer N50 than fermi, SGA and
 SOAPdenovo partly because it uses 100-fold data and reads from jumping
 libraries. However, the ALLPATHS-LG assembly covers fewer reference bases and
-yields over twice as many as break points.  ALLPATHS-LG alignment also reveals
-highly enriched 135bp INDELs (data not shown), which is not seen in other
-assemblies. Between fermi, SGA and SOAPdenovo which are applied on the same
-data set, fermi has longer N50 with similar number of alignment break points.
-Overall, fermi achieves comparable assembly quality to other assemblers.
+yields over twice as many as break points. Between fermi, SGA and SOAPdenovo
+which are applied on the same data set, fermi has longer N50 with similar
+number of alignment break points.  Overall, fermi achieves comparable assembly
+quality to other assemblers.
 
 \subsection{Performance on SNP and INDEL calling}
 
 One of the key motivations of fermi is to explore the power of de novo assembly
 in calling short variants. We collected several SNP and INDEL call sets (Table~3)
-and compared the performance of fermi (Table~4 and 5).
+and compared the performance of fermi (Table~4 and 5). For INDEL calling from
+assembled sequences, we only directly count INDELs from the SAMtools' pileup
+output, instead of running a standard INDEL caller as short-read INDEL callers
+do not work well with long contig sequences.
 
 \begin{table}[t]
 \processtable{Evaluated SNP and INDEL call sets}
@@ -720,13 +722,13 @@ and compared the performance of fermi (Table~4 and 5).
 \toprule
 Label & Data & Assembler & Mapper & Caller \\
 \midrule
-AC & 96X Illumina PE$^1$ & AllPaths-LG & BWA-SW$^2$ & Counting$^3$ \\
+AC & 96X Illumina PE$^1$ & AllPaths-LG & BWA-SW$^2$ & SAMtools$^3$ \\
 BS & 70X Illumina PE & & BWA$^4$ & SAMtools \\
 CG & Complete Genom.& & cgatools2$^5$ & cgatools2 \\
 CV & 26X Illumina SE$^6$ & Cortex & & Cortex-var \\
-FC & 35X Illumina SE$^6$ & fermi & BWA-SW$^2$ & Counting$^3$ \\
+FC & 35X Illumina SE$^6$ & fermi & BWA-SW$^2$ & SAMtools$^3$ \\
 MD & 60X multiple        & & MAQ & 1000g pilot$^7$ \\
-MI & Capillary reads     & \\
+MI & Capillary reads$^8$     & &     & \\
 SS & 35X Illumina SE$^6$ & & BWA-SW & SAMtools \\
 \botrule
 \end{tabular}}{
@@ -737,6 +739,7 @@ $^4$ Realigned by GATK~\citep{Depristo:2011vn} also around known INDELs\\
 $^5$ By Complete Genomics~\citep{Drmanac:2010ly}; only `VQHIGH' calls retained\\
 $^6$ CV, FC and SS do not use the pairing information in calling\\
 $^7$ 1000 Genomes Project pilot calls; generated from Dindel and multiple SNP callers\\
+$^8$ INDEL calls by \citet{Mills:2011fk}\\
 }
 \end{table}
 
@@ -780,12 +783,10 @@ arise from a long homozygous block.
 
 Table~5 shows the comparison between different INDEL call sets. We excluded
 INDELs around long homopolymer runs in all call sets because INDEL sequencing
-errors tend to occur around INDELs and their error profile is still unclear
+errors tend to occur around long homopolymer runs and their error profile is still unclear
 (the 1000 Genomes Project Analysis group, personal communication). In addition,
-we have also derived INDEL call sets for SS and AC, but we did not show them:
-SS is largely contained in BS due to the use of the same INDEL caller, while AC
-does not perform well possibly because our INDEL calling procedure does not
-work well with the ALLPATHS-LG assembly.
+we have excluded the SS INDEL call set which is nearly contained in BS due to
+the use of the same INDEL caller.
 
 For the call sets in Table~5, MD and CG are relatively small due to the use of
 very short reads. CV uses 26X 100bp reads. It is a small call set due to the
@@ -795,7 +796,7 @@ call sets than BS, and more FC calls are confirmed by others. One explanation
 to the lower overlapping ratio between BS and ALL is that BS is the only call
 set that uses 101bp paired-end information, which gives it higher power for
 INDELs not detectable with single-end or very short reads.  Nonetheless, purely
-based on Table~5, fermi has higher overall accuracy.
+based on Table~5, fermi appears to have higher overall accuracy.
 
 % 1:16907626 - deletion visible from fermi/bwa alignment; low mapping quality; uncalled
 % 1:16954475 - DP=139 (expected=35); no indel in alignment
@@ -849,13 +850,13 @@ short reads, we can recover most of short INDELs found by capillary sequencing.
 
 %         MD     CG     BS     CV     FC      AC    MI    all
 % -----------------------------------------------------------
-% MD  240424 196936 225339 163070 227799  149753 12981 234927
-% CG  199071 264696 242198 166611 244577  161052 13861 255450
-% BS  228431 241722 404646 201341 341624  229152 17682 366623
-% CV  178131 182752 222029 251769 227214  164424 13045 232415
-% FC  231790 245167 344041 205989 394223  240180 17726 374812
-% AC  151455 160311 227719 151455 236660  323423 13796 253318
-% MI   13772  14348  18350  12226  18672   14751 23216  20070
+% MD  240424 196936 225339 163070 227796  149559 12981 234930
+% CG  199071 264696 242198 166611 244573  160786 13861 255440
+% BS  228431 241722 404646 201341 341626  228833 17682 366599
+% CV  178131 182752 222029 251769 227206  164320 13045 232406
+% FC  231787 245165 344031 205983 393841  239822 17726 374760
+% AC  151147 159973 227291 143648 236222  321682 13784 252817
+% MI   13772  14348  18350  12226  18672   14740 23216  20069
 
 \begin{table}[tb]
 \processtable{Fraction of INDELs found in other call sets\label{tab:indel}}
@@ -868,7 +869,7 @@ MD & 240424 &  0.819 &  0.937 &  0.678 &  0.947 &  0.054 &  0.977 \\
 CG &  0.752 & 264696 &  0.915 &  0.629 &  0.924 &  0.052 &  0.965 \\
 BS &  0.564 &  0.597 & 404646 &  0.498 &  0.844 &  0.044 &  0.906 \\
 CV &  0.708 &  0.726 &  0.882 & 251769 &  0.902 &  0.052 &  0.923 \\
-FC &  0.588 &  0.624 &  0.873 &  0.522 & 394223 &  0.045 &  0.951 \\
+FC &  0.588 &  0.624 &  0.873 &  0.522 & 393841 &  0.045 &  0.952 \\
 MI &  0.593 &  0.618 &  0.790 &  0.527 &  0.804 &  23216 &  0.864 \\
 \botrule
 \end{tabular}}
@@ -904,7 +905,7 @@ homopolymer regions, INDEL call sets do not often contain false positives, but
 they may have high false negative rate, which leads to the apparent small
 overlap between call sets~\citep{Lam:2012fk}.
 
-As a theoretical remark, we note that with reads counts kept, unitigs are
+As a theoretical remark, we note that with read counts kept, unitigs are a
 \emph{lossless} but \emph{reduced} representation of sequence reads. They are
 `reduced' in that individual reads are lost; they are `lossless' in that all
 the information in reads, such as small variants, copy numbers and structural
