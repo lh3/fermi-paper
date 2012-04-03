@@ -666,7 +666,19 @@ helps to reduce misassemblies during the unitig construction.
 
 We evaluated fermi on 101bp paired-end reads from NA12878~\citep{Depristo:2011vn}.
 The total coverage of the original data is about 70-fold, but we only used half
-of them.
+of them. We assembled the 35-fold reads with fermi on a machine with 12 CPUs
+and 96GB memory in about 5 days. The peak memory usage is 92GB.
+
+We obtained unitigs of N50 1,022bp, totaling 3.83Gb. After collapsing
+most heterozygotes and closing gaps with paired-end reads, we got longer contigs
+(Table~5). Unitigs are short and redundant mainly because they break at
+heterozygotes.
+
+For SNP and INDEL calling, we aligned unitigs to the reference genome using
+BWA-SW~\citep{Li:2010fk} with command line options `-b9 -q16 -r1 -w500'. We
+called SNPs with the SAMtools caller and INDELs by directly counting INDELs
+from the pileup output. We did not run a standard INDEL caller as short-read
+INDEL callers do not work well with long contig sequences.
 
 \subsection{Performance on de novo assembly}
 We obtained the ALLPATHS-LG NA12878 contigs from NCBI (AC:AEKP01000000), the
@@ -711,10 +723,7 @@ quality to other assemblers.
 
 One of the key motivations of fermi is to explore the power of de novo assembly
 in calling short variants. We collected several SNP and INDEL call sets (Table~3)
-and compared the performance of fermi (Table~4 and 5). For INDEL calling from
-assembled sequences, we only directly count INDELs from the SAMtools' pileup
-output, instead of running a standard INDEL caller as short-read INDEL callers
-do not work well with long contig sequences.
+and compared the performance of fermi (Table~4 and 5).
 
 \begin{table}[t]
 \processtable{Evaluated SNP and INDEL call sets}
@@ -916,6 +925,8 @@ Accurately and efficiently constructing unitigs might provide an interesting
 alternative to data storage and downstream analyses in future, though practical
 challenges, such as the high computational cost and the lack of accuracy of
 unitigs, remain at present.
+
+\vspace*{-1em}
 
 \section*{ACKNOWLEDGEMENTS}
 We are grateful to David Reich and Evan Eichler for providing additional data
