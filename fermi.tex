@@ -227,17 +227,16 @@ valid assembly from input reads. \citet{Myers:2005bh} called this property of
 path consistency as \emph{read coherence}.
 
 Losing long-range information in reads, a de Bruijn graph by itself has
-reduced power to resolve short repeats. This flaw is usually amended by mapping
-reads back to the graph and bisecting repeats shorter than the reads, a procedure
-some called as \emph{read threading}. Many de Buijn graph based assemblers
-essentially take this
-strategy~\citep{Pevzner:2001vn,Chaisson:2009fk,Zerbino:2009ly,Li:2010vn},
-though they may use different terminologies.  With read threading, it is
-theoretically possible to transform a de Bruijn graph to a coherent graph, but
-it is known to be NP-hard~\citep{DBLP:conf/wabi/MedvedevGMB07} and may be
-complex to implement given complex repeat structures. For a coherent
-representation of reads, a unitig graph is preferred both in theory and in
-practice.
+reduced power to resolve short repeats. This flaw is usually amended solving
+a \emph{Eulerian superpath problem}~\citep{Pevzner:2001vn} whereby we
+map reads back to the graph and bisect repeats shorter than the reads, a
+procedure some also called as \emph{read threading}. Many de Buijn graph based
+assemblers essentially take this
+strategy~\citep{Chaisson:2009fk,Zerbino:2009ly,Li:2010vn}, though they may use
+different terminologies.  With read threading, it is possible to transform a de
+Bruijn graph to a coherent graph, but finding the optimal solution is known to be
+NP-hard~\citep{DBLP:conf/wabi/MedvedevGMB07} and may be complex to implement
+given complex repeat structures.
 
 \subsubsection{Concluding remark}
 We noted that we only focused on the theoretical aspects of de novo assembly.
@@ -443,9 +442,9 @@ Given a bidirectional collection $T=R_0\overline{R}_0\ldots
 R_{n-1}\overline{R}_{n-1}$, fermi labels the $i$-th input read $R_i$ with an
 \emph{ordered} integer pair $[k,l]$, where $k$ is the rank of $R_i$
 and $l$ the rank of $\overline{R}_i$. The pair $[k,l]$ can be computed by
-{\sc GetSeq}$(2i)$ and {\sc GetSeq}$(2i+1)$, respectively. We also call
-$[k,l]$ as the \emph{bi-interval of read} $R_i$. Obviously, the bi-interval
-of read $\overline{R}_i$ is $[l,k]$, with the two integer swapped.
+{\sc GetSeq}$(2i)$ and {\sc GetSeq}$(2i+1)$, respectively. Obviously, if read
+$R_i$ is labeled by $[k,l]$, $\overline{R}_i$ should be labeled by
+$[l,k]$, with the two integer swapped.
 
 For two reads labeled by $[k,l]$ and $[k',l']$, if the tail (3'-end) of read
 $[k,l]$ overlaps the head (5'-end) of $[k',l']$, we use an \emph{unordered}
