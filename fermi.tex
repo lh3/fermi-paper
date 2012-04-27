@@ -44,7 +44,7 @@ similar accuracy for SNP calling and better results for INDEL calling. It has
 higher sensitivity than other de novo assembly based methods for variant
 calling. Our work suggests that variant calling with de novo assembly can be a
 beneficial complement to the standard variant calling pipeline for whole-genome
-resequencing. In the methodological aspects, we proposed FMD-index for
+resequencing. In the methodological aspects, we propose FMD-index for
 forward-backward extension of DNA sequences, a fast algorithm for finding
 all super-maximal exact matches and one-pass construction of unitigs
 from an FMD-index.
@@ -71,7 +71,7 @@ advantage of data and may produce inconsistent outputs which complicate variant
 calling.  This flaw has gradually attracted the attention of various research
 groups who subsequently proposed several methods to alleviate the effect,
 including post alignment
-filtering~\citep{Li:2008zr,Ossowski:2008if,Krawitz:2010zr}, iterative
+filtering~\citep{Ossowski:2008if,Krawitz:2010zr}, iterative
 mapping~\citep{Manske:2009ve}, read
 realignment~\citep{Albers:2010ud,Homer:2010kx,Li:2011kx,Depristo:2011vn} and
 local assembly~\citep{Carnevali:2011fk}.  However, because these methods still
@@ -104,7 +104,7 @@ distinguish heterozygotes from sequencing errors. Cortex~\citep{Iqbal:2012ys}
 is specifically designed for retaining heterozygous variants in an assembly,
 but it may be missing heterozygotes. ALLPATHS-LG~\citep{Gnerre:2011ys}
 also paid particular attention to keep heterozygotes, but it still has
-relatively a low sensitivity. In addition, ALLPATHS-LG only works with
+a relatively low sensitivity. In addition, ALLPATHS-LG only works with
 reads from libraries with distinct insert size distributions and prefers read
 pairs with mean insert size below three times of the read length, while many
 resequencing projects do not meet these requirements and thus ALLPATHS-LG may
@@ -118,7 +118,7 @@ procedure will be affected by the same flaw of read mapping. To the best of our
 knowledge, no existing de novo assemblers are able to achieve the sensitivity
 of the standard mapping based approach for a diploid mammalian genome.
 
-In this article, we will show the first time that the assembly based variant
+In this article, we will show that the assembly based variant
 calling can achieve a SNP accuracy close to the standard mapping approach
 and have particular strength in INDEL calling, confirming previous
 studies~\citep{Iqbal:2012ys}. In addition, the de novo assembly
@@ -151,8 +151,7 @@ To solve the problem, they proposed a three-step procedure, which is
 essentially the overlap-layout-consensus (OLC) approach.
 
 \citet{Myers:1995nx} pointed out that reducing DNA assembly to a shortest
-string problem is flawed in the presence of repeat. He (see also
-\citealt{DBLP:journals/algorithmica/KececiogluM95}) further proposed the
+string problem is flawed in the presence of repeat. He further proposed the
 concept of \emph{overlap graph}, where a vertex corresponds to a read and a
 bidirectional edge to an overlap. Naively, the DNA assembling problem can be
 cast as finding a path in the overlap graph such that each vertex/read is
@@ -191,7 +190,7 @@ and to remove false overlap edges by solving a minimum cost network flow
 problem. Finding the optimal assembly in the resultant graph can be reduced to
 a Eulerian path problem, which has a linear time solution. Myers originally
 applied this procedure to \emph{string graph}, an equivalence to unitig graph.
-\citet{Medvedev:2009ve} pointed out that determining the traversal count can
+\citet{DBLP:conf/wabi/MedvedevGMB07} pointed out that determining the traversal count can
 also be resolved directly in the bidirectional unitig graph using a bidirected
 network flow-based algorithm.
 
@@ -212,7 +211,7 @@ In summary, in the OLC paradigm, the sequence assembly problem can be
 practically solved in a time roughly linear in the total length of reads.
 
 \subsubsection{De Bruijn graph and read coherence}
-De Bruijn graph is an alternative graph representation of sequence
+The de Bruijn graph is an alternative graph representation of sequence
 reads~\citep{Idury:1995oq}.  It can be trivially constructed with a simple
 linear-time algorithm. This makes the de Bruijn graph approach very attractive
 for assembling many short reads.
@@ -233,12 +232,12 @@ reads back to the graph and bisecting repeats shorter than the reads, a procedur
 some called as \emph{read threading}. Many de Buijn graph based assemblers
 essentially take this
 strategy~\citep{Pevzner:2001vn,Chaisson:2009fk,Zerbino:2009ly,Li:2010vn},
-though they may use different terminologies.
-
-With read threading, it is theoretically possible to transform a de Bruijn graph
-to a coherent graph, but in practice, threading is not straightforward and
-may be inefficient given complex repeat structures. For a coherent representation
-of reads, a unitig graph is simpler to construct.
+though they may use different terminologies.  With read threading, it is
+theoretically possible to transform a de Bruijn graph to a coherent graph, but
+it is known to be NP-hard~\citep{DBLP:conf/wabi/MedvedevGMB07} and may be
+complex to implement given complex repeat structures. For a coherent
+representation of reads, a unitig graph is preferred both in theory and in
+practice.
 
 \subsubsection{Concluding remark}
 We noted that we only focused on the theoretical aspects of de novo assembly.
@@ -293,7 +292,7 @@ Given a string $T$, let $|T|$ be the length of the string, $T[i]$,
 $i=0,\ldots,|T|-1$, be the $i$-th symbol in the string, $T[i,j]$, $0\le i\le
 j<|T|$, be a substring and $T_i=T[i,|T|-1]$ be a suffix of $T$. Following
 the definition by~\citet{en:2009fk}, we define a string terminated with `{\tt
-\$}' as a \emph{text}. A text may have multiple sentinals. In a text $T$, if
+\$}' as a \emph{text}. A text may have multiple sentinels. In a text $T$, if
 $T[i]=\$$ and $T[j]=\$$, we mandate $T[i]<T[j]$ if and only if $i<j$. Thus when
 we compare two suffixes of $T$, we do not need to compare beyond a sentinel
 because each sentinel has a different lexicographical rank.
@@ -304,7 +303,7 @@ Given an ordered set of texts, we call their ordered string concatenation
 as a \emph{collection}, which is also a text. For example, suppose we have
 two reads. The first is {\tt ACG} and the second is {\tt GTG}. The collection
 of the two reads is $T=\mbox{\tt ACG\$GTG\$}$. Suffix $T_2<T_6$ because the first
-sentinal is lexicographically smaller than the second.
+sentinel is lexicographically smaller than the second.
 
 For convenience, we assign an integer from 0 to 5 to `{\tt \$}', `{\tt A}',
 `{\tt C}', `{\tt G}', `{\tt T}' and `{\tt N}', respectively. We may use both
@@ -349,13 +348,13 @@ The second return value is the rank of $Q_i$ which equals $|\{Q_j:Q_j<Q_i\}|$.
 \begin{algorithm}[h]
 \DontPrintSemicolon
 \footnotesize
-\KwIn{Sequence index $i\ge0$}
+\KwIn{Sequence index $i\ge0$; $B$, $O$ and $C$ defined in the text}
 \KwOut{Sequence $P$ and $k$, the rank of $P$}
 \BlankLine
 \textbf{Function} {\sc GetSeq}$(i)$
 \Begin {
 	$k\gets i$\;
-	$P\gets\epsilon$\;
+	$P\gets$ \emph{empty string}\;
 	\While{\bf true} {
 		$a\gets B[k]$\;
 		$k\gets C(a)+O(a,k)-1$\;
@@ -523,7 +522,7 @@ filter contained reads first and then run Algorithm 4, as SGA does.
 	}
 	\Return{${\sf IrrOvlp}$}
 }
-\caption{Finding irreducible overlaps (SD10)}
+\caption{Finding irreducible overlaps}
 \end{algorithm}
 
 \subsubsection{Unitig construction}
@@ -617,7 +616,7 @@ Fermi corrects potential sequencing errors using an algorithm similar to
 solving the spectrum alignment problem~\citep{Pevzner:2001vn}, correcting
 bases in underrepresented $k$-mers. It also shares similarity to
 HiTEC~\citep{Ilie:2011fk}. Nonetheless, the fermi's algorithm differs in that
-it is quality aware and does not replies on a user defined threshold on the
+it is quality aware and does not rely on a user defined threshold on the
 $k$-mer occurrences.
 
 Fermi corrects errors in two phases. In the first phase, it collect all 23-mer
@@ -671,7 +670,7 @@ and 96GB memory in about 5 days. The peak memory usage is 92GB.
 
 We obtained unitigs of N50 1,022bp, totaling 3.83Gb. After collapsing
 most heterozygotes and closing gaps with paired-end reads, we got longer contigs
-(Table~5). Unitigs are short and redundant mainly because they break at
+(Table~4). Unitigs are short and redundant mainly because they break at
 heterozygotes.
 
 For SNP and INDEL calling, we aligned unitigs to the reference genome using
