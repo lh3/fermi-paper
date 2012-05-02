@@ -227,7 +227,7 @@ valid assembly from input reads. \citet{Myers:2005bh} called this property of
 path consistency as \emph{read coherence}.
 
 Losing long-range information in reads, a de Bruijn graph by itself has
-reduced power to resolve short repeats. This flaw is usually amended solving
+reduced power to resolve short repeats. This flaw is usually amended by solving
 a \emph{Eulerian superpath problem}~\citep{Pevzner:2001vn} whereby we
 map reads back to the graph and bisect repeats shorter than the reads, a
 procedure some also called as \emph{read threading}. Many de Buijn graph based
@@ -236,7 +236,7 @@ strategy~\citep{Chaisson:2009fk,Zerbino:2009ly,Li:2010vn}, though they may use
 different terminologies.  With read threading, it is possible to transform a de
 Bruijn graph to a coherent graph, but finding the optimal solution is known to be
 NP-hard~\citep{DBLP:conf/wabi/MedvedevGMB07} and may be complex to implement
-given complex repeat structures.
+given rich repeat structures.
 
 \subsubsection{Concluding remark}
 We noted that we only focused on the theoretical aspects of de novo assembly.
@@ -618,7 +618,7 @@ HiTEC~\citep{Ilie:2011fk}. Nonetheless, the fermi's algorithm differs in that
 it is quality aware and does not rely on a user defined threshold on the
 $k$-mer occurrences.
 
-Fermi corrects errors in two phases. In the first phase, it collect all 23-mer
+Fermi corrects errors in two phases. In the first phase, it collects all 23-mer
 occurring 3 or more times using a top-down traversal over the trie represented
 by the FMD-index. For each such 23-mer, fermi counts the occurrences of
 the next (i.e. the 24-th) base and stores the information in a hash table
@@ -628,7 +628,7 @@ function of base quality and the occurrences of the 24-th base. Roughly
 speaking, fermi tries to correct a low-quality base if by looking up its 23-mer
 prefix we know the base is different from an overwhelmingly frequent 24-th base.
 This algorithm can be adapted to correct INDEL sequencing errors in principle,
-but more works are needed to perform minimization efficiently.
+but this has not been done. More works are needed to perform minimization efficiently.
 
 \subsubsection{Simplifying complex bubbles}
 A \emph{bubble} is a directed acyclic subgraph with a single source and a
@@ -674,48 +674,55 @@ heterozygotes.
 
 For SNP and INDEL calling, we aligned unitigs to the reference genome using
 BWA-SW~\citep{Li:2010fk} with command line options `-b9 -q16 -r1 -w500'. We
-called SNPs with the SAMtools caller and INDELs by directly counting INDELs
+called SNPs with the SAMtools caller and called INDELs by directly counting INDELs
 from the pileup output. We did not run a standard INDEL caller as short-read
 INDEL callers do not work well with long contig sequences.
 
 \subsection{Performance on de novo assembly}
-We obtained the ALLPATHS-LG NA12878 contigs from NCBI (AC:AEKP01000000), the
-SGA and SOAPdenovo scaffolds from
-\mbox{\href{http://bit.ly/jts12878}{http://bit.ly/jts12878}}~\citep{Simpson:2011ly}, and the HuRef
-assembly~\citep{Levy:2007uq} for
-the comparison to the traditional capillary assembly. For the SGA and
-SOAPdenovo scaffolds, we split at any ambiguous bases to get contigs; for the
-HuRef assembly, we split at contiguous `N' longer than 20bp.
+We obtained the HuRef capillary read assembly~\citep{Levy:2007uq} and the
+ALLPATHS-LG NA12878 contigs (AC:AEKP01000000) from NCBI, the SGA scaffolds from
+\mbox{\href{http://bit.ly/jts12878}{http://bit.ly/jts12878}}~\citep{Simpson:2011ly}
+and the ABySS assembly provided by Shaun Jackman (personal communication).
+For both SGA and ABySS scaffolds, we split at any ambiguous bases to get
+contigs; for the HuRef assembly, we split at contiguous `N' longer than 20bp.
+The ABySS, fermi and SGA assemblies are derived from essentially the same input
+reads. ALLPATH-LG uses a superset of reads at 100-fold coverage, including
+reads from multiple long-insert libraries.
 
 \begin{table}[bt]
 \processtable{Statistics on human whole-genome assemblies}
 {\begin{tabular}{lrrrrr}
 \toprule
-& AllPaths-LG & fermi & SGA & SOAP & HuRef \\
+%& AllPaths-LG & fermi & SGA & SOAP & HuRef \\
+%\midrule
+%Aligned contig bases & 2.62G & 2.82G & 2.74G & 2.71G & 2.88G \\
+%Aligned N50          & 22.6k & 15.6k & 9.8k  & 7.0k  & 81.4k \\
+%Covered ref. bases   & 2.59G & 2.74G & 2.70G & 2.67G & 2.78G \\
+%\# Type-1 breaks & 13,738 & 5,704 & 6,049 & 4,962 & 16,318 \\
+%\# Type-2 breaks & 3,823 & 1,120 & 1,735 & 727 & 6,626 \\
+
+                     & ABySS & AllPaths-LG & fermi & SGA & HuRef \\
 \midrule
-Aligned contig bases & 2.62G & 2.82G & 2.74G & 2.71G & 2.88G \\
-Aligned N50          & 22.6k & 15.6k & 9.8k  & 7.0k  & 81.4k \\
-Covered ref. bases   & 2.59G & 2.74G & 2.70G & 2.67G & 2.78G \\
-\# Type-1 breaks & 13,738 & 5,704 & 6,049 & 4,962 & 16,318 \\
-\# Type-2 breaks & 3,823 & 1,120 & 1,735 & 727 & 6,626 \\
+Aligned contig bp    & 2.72G & 2.62G & 2.82G & 2.74G & 2.88G \\
+Aligned N50          & 9.3k  & 22.6k & 15.6k & 9.8k  & 81.4k \\
+Covered ref. bp      & 2.68G & 2.59G & 2.74G & 2.70G & 2.78G \\
+\# Type-1 breaks     & 7,396 &13,738 & 5,704 & 6,049 & 16,318 \\
+\# Type-2 breaks     & 3,130 & 3,823 & 1,120 & 1,735 & 6,626 \\
 \botrule
 \end{tabular}}{Contigs over 150bp in length are aligned to the human reference
 genome GRCh37 with BWA-SW using option `-b33 -q50 -r17'. A type-1 break point
-is detected if a contig is split in alignment and mapped to two distict locations, and at
-each location the alignment is longer than 500bp and the mapping quality is no
-less than 10. Type-2 break points exclude type-1 break points which can be patched
-with gaps no longer than 500bp.} \end{table}
+is detected if a contig is split during alignment and mapped to two distict
+locations, and at each location the alignment is longer than 500bp and the
+mapping quality is no less than 10. Type-2 break points exclude type-1 break
+points which can be patched with gaps no longer than 500bp.} \end{table}
 
-From Table~2, we can see that the HuRef assembly has much better
-contiguity than short-read assemblies. It contains more
-alignment break points when aligned against the GRCh37, but these are not
-necessarily all misassemblies. ALLPATHS-LG has longer N50 than fermi, SGA and
-SOAPdenovo partly because it uses 100-fold data and reads from jumping
-libraries. However, the ALLPATHS-LG assembly covers fewer reference bases and
-yields over twice as many as break points. Between fermi, SGA and SOAPdenovo
-which are applied on the same data set, fermi has longer N50 with similar
-number of alignment break points.  Overall, fermi achieves comparable assembly
-quality to other assemblers.
+From Table~2, we can see that the HuRef assembly has much better contiguity
+than short-read assemblies. It appears to yield more alignment break points, some
+of which may be caused by true structural variations not easily detectable with
+short reads. The quality of short-read assemblies varies in terms of contiguity,
+misassembly rate and redundancy between contigs, but overall, they are largely
+comparable to each other. The ABySS assembly may be further improved as it
+is not tuned for the input as much as others.
 
 \subsection{Performance on SNP and INDEL calling}
 
@@ -785,7 +792,7 @@ be due to small-scale misassemblies in fermi unitigs or in the reference
 assembly, or copy-number variations. It is possible that these clustered
 SNPs contain more errors. Such errors may lead to reduced ts/tv, but tend
 not to break long homozygous blocks due to very recent coalescences. That
-is why FC has a high DN2/DN50 ratio, which measures how often false heterozygotes
+is why FC has a good DN2/DN50 ratio, which measures how often false heterozygotes
 arise from a long homozygous block.
 
 Table~5 shows the comparison between different INDEL call sets. We excluded
@@ -927,11 +934,12 @@ unitigs, remain at present.
 \vspace*{-1em}
 
 \section*{ACKNOWLEDGEMENTS}
-We are grateful to David Reich and Evan Eichler for providing additional data
-for testing fermi, to Peter Sudmant for offering computing resources and
-to David Altshuler and the Genome Sequence Analyis group for the helpful
-discussions. We also thank Richard Durbin and Jared Simpson for their
-comments on the initial draft of the manuscript.
+We are grateful to David Reich, Evan Eichler and Peter Sudmant for providing
+additional data and computing resources for evaluating fermi, to David
+Altshuler and the GSA group at Broad for the helpful discussions and to Richard
+Durbin and Jared Simpson for their comments on the initial draft of the
+manuscript. We particularly thank Shaun Jackman for providing the ABySS
+assembly.
 
 \paragraph{Funding\textcolon} NIH 1U01HG005208-01.
 \bibliography{fermi}
