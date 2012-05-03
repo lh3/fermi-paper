@@ -71,14 +71,13 @@ advantage of data and may produce inconsistent outputs which complicate variant
 calling.  This flaw has gradually attracted the attention of various research
 groups who subsequently proposed several methods to alleviate the effect,
 including post alignment
-filtering~\citep{Ossowski:2008if,Krawitz:2010zr}, iterative
-mapping~\citep{Manske:2009ve}, read
-realignment~\citep{Albers:2010ud,Homer:2010kx,Li:2011kx,Depristo:2011vn} and
-local assembly~\citep{Carnevali:2011fk}.  However, because these methods still
-rely on the initial mapping, it is difficult for them to identify and recover
-mismapped or unmapped reads due to high sequence divergence, long insertions,
-SVs, copy number changes or misassemblies of the reference genome. They have
-not solved the problem from the root.
+filtering~\citep{Ossowski:2008if}, iterative mapping~\citep{Manske:2009ve},
+read realignment~\citep{Albers:2010ud,Homer:2010kx,Li:2011kx,Depristo:2011vn}
+and local assembly~\citep{Carnevali:2011fk}.  However, because these methods
+still rely on the initial mapping, it is difficult for them to identify and
+recover mismapped or unmapped reads due to high sequence divergence, long
+insertions, SVs, copy number changes or misassemblies of the reference genome.
+They have not solved the problem from the root.
 
 Another distinct approach to variant calling that fundamentally avoids the flaw of the
 mapping based approach is to assemble sequence reads into contigs and to
@@ -189,8 +188,8 @@ not be useful in practice as we can rarely assemble the entire genome into
 one string. A more practical solution is to compute a traversal count
 for each edge by solving a minimum cost network flow
 problem~\citep{Myers:2005bh} and to drop edges with zero count as false
-overlaps. In the resulting graph, each unambiguous path spells a
-contig.
+overlaps. In the resulting graph, each unambiguous path can be considered to
+spell a contig.
 
 Computing traversal counts in a transitively reduced graph can be conducted
 in small subgraphs separated by some unambiguous edges. The overall time
@@ -207,7 +206,8 @@ These authors developed an $O(N)$ algorithm to find all the irreducible edges,
 effectively replacing the overlapping and transitive reduction phases.
 
 In summary, in the OLC paradigm, contig sequences can be constructed in a time
-roughly linear in the total length of reads.
+roughly linear in the total length of reads, though deriving a single assembled
+sequence in theorey is NP-hard.
 
 \subsubsection{De Bruijn graph and read coherence}
 The de Bruijn graph is an alternative graph representation of sequence
@@ -939,8 +939,7 @@ additional data and computing resources for evaluating fermi, to David
 Altshuler and the GSA group at Broad for the helpful discussions and to Richard
 Durbin and Jared Simpson for their comments on the initial draft of the
 manuscript. We also thank Shaun Jackman for providing the ABySS
-assembly and Michael Brudno for his insight into the time complexity of
-assembly algorithms.
+assembly and Michael Brudno for his insight into the algorithm time complexity.
 
 \paragraph{Funding\textcolon} NIH 1U01HG005208-01.
 \bibliography{fermi}
