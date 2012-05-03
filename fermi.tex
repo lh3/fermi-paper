@@ -183,38 +183,38 @@ collapsed to a single unitig. The concept of unitig helps to greatly simplify
 an assembly graph. It has played a central role in the Celera
 assembler~\citep{Myers:2000kl}.
 
-On the other hand, introducing unitigs has not theoretically solved the
-sequence assembly to the end. \citet{Myers:2005bh}, based on the suggestion
-by~\citet{Pevzner:2001vn}, proposed to compute a traversal count for each edge
-and to remove false overlap edges by solving a minimum cost network flow
-problem. Finding the optimal assembly in the resultant graph can be reduced to
-a Eulerian path problem, which has a linear time solution. Myers originally
-applied this procedure to \emph{string graph}, an equivalence to unitig graph.
-\citet{DBLP:conf/wabi/MedvedevGMB07} pointed out that determining the traversal count can
-also be resolved directly in the bidirectional unitig graph using a bidirected
-network flow-based algorithm.
+Finding the optimal tour in a unitig graph is still
+NP-hard~\citep{DBLP:conf/wabi/MedvedevGMB07}, but such a formulation may
+not be useful in practice as we can rarely assemble the entire genome into
+one string. A more practical solution is to compute a traversal count
+for each edge by solving a minimum cost network flow
+problem~\citep{Myers:2005bh} and to drop edges with zero count as false
+overlaps. In the resulting graph, each unambiguous path spells a
+contig.
 
-Once we get a transitively reduced graph, the subsequent steps can be achieved
-in roughly linear time most of time -- the worst case almost never happens
-globally in practice. However, deriving an overlap graph takes $O(N^2)$ time,
-where $N$ is the number of reads, and transitive reduction takes at least
-$O(E)$ time, where $E$ is the number of edges which is usually much larger than
-$N$. This still makes an OLC based approach less favorable in short-read
-assembly where $N$ can be of the order of $10^9$.
+Computing traversal counts in a transitively reduced graph can be conducted
+in small subgraphs separated by some unambiguous edges. The overall time
+complexity is not much worse than linear -- the worst case almost never happens
+globally.  However, deriving an overlap graph takes $O(N^2)$ time, where $N$ is
+the number of reads, and transitive reduction takes at least $O(E)$ time, where
+$E$ is the number of edges which is usually much larger than $N$. This still
+makes an OLC based approach less favorable in short-read assembly where $N$ can
+be of the order of $10^9$.
 
 A breakthrough achieved by~\citet{Simpson:2010uq} finally solved
 this last remaining problem at least when we only consider exact overlaps.
 These authors developed an $O(N)$ algorithm to find all the irreducible edges,
 effectively replacing the overlapping and transitive reduction phases.
 
-In summary, in the OLC paradigm, the sequence assembly problem can be
-practically solved in a time roughly linear in the total length of reads.
+In summary, in the OLC paradigm, contig sequences can be constructed in a time
+roughly linear in the total length of reads.
 
 \subsubsection{De Bruijn graph and read coherence}
 The de Bruijn graph is an alternative graph representation of sequence
 reads~\citep{Idury:1995oq}.  It can be trivially constructed with a simple
-linear-time algorithm. This makes the de Bruijn graph approach very attractive
-for assembling many short reads.
+linear-time algorithm and finding the optimal tour has polynomial-time
+solutions. These make the de Bruijn graph approach very attractive for
+assembling many short reads.
 
 However, de Bruijn is `lossy'. From a theoretical point view, a de Bruijn graph
 is equivalent to an overlap graph built by splitting a long read into overlap
@@ -938,8 +938,9 @@ We are grateful to David Reich, Evan Eichler and Peter Sudmant for providing
 additional data and computing resources for evaluating fermi, to David
 Altshuler and the GSA group at Broad for the helpful discussions and to Richard
 Durbin and Jared Simpson for their comments on the initial draft of the
-manuscript. We particularly thank Shaun Jackman for providing the ABySS
-assembly.
+manuscript. We also thank Shaun Jackman for providing the ABySS
+assembly and Michael Brudno for his insight into the time complexity of
+assembly algorithms.
 
 \paragraph{Funding\textcolon} NIH 1U01HG005208-01.
 \bibliography{fermi}
