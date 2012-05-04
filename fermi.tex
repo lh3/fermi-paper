@@ -159,11 +159,11 @@ be traversed), equivalent to a Hamilton path problem which is known to be
 NP-complete. This has led many to believe that the OLC approach is
 theoretically crippled.
 
-However, this is a misbelief. Although the assembly problem can be reduced to a
+However, it is worth pointing out that although the assembly problem can be reduced to a
 Hamilton path problem, it can be reduced to other problems as well and in
-practice almost no assemblers try to solve a Hamilton path problem.  We note
-that a fundamental difference between a generic graph and an overlap graph is
-that the latter can be transitively reduced while retaining the read
+practice almost no assemblers try to solve a Hamilton path problem.  We note that a
+fundamental difference between a generic graph and an overlap graph is the
+latter can be transitively reduced while retaining the read
 relationship. More formally, if $v_1\to v_2$, $v_2\to v_3$ and $v_1\to v_3$ are
 all present, edge $v_1\to v_3$ is said to be \emph{reducible}. When we removed
 all the contained reads and reducible edges, a procedure called
@@ -703,11 +703,11 @@ reads from multiple long-insert libraries.
 
                      & ABySS & AllPaths-LG & fermi & SGA & HuRef \\
 \midrule
-Aligned contig bp    & 2.72G & 2.62G & 2.82G & 2.74G & 2.88G \\
-Aligned N50          & 9.3k  & 22.6k & 15.6k & 9.8k  & 81.4k \\
-Covered ref. bp      & 2.68G & 2.59G & 2.74G & 2.70G & 2.78G \\
-\# Type-1 breaks     & 7,396 &13,738 & 5,704 & 6,049 & 16,318 \\
-\# Type-2 breaks     & 3,130 & 3,823 & 1,120 & 1,735 & 6,626 \\
+Aligned contig bp    & 2.73G & 2.62G & 2.82G & 2.74G & 2.88G \\
+Aligned N50          & 9.0k  & 22.6k & 15.6k & 9.8k  & 81.4k \\
+Covered ref. bp      & 2.69G & 2.59G & 2.74G & 2.70G & 2.78G \\
+\# Type-1 breaks     & 5,856 &13,738 & 5,704 & 6,049 & 16,318 \\
+\# Type-2 breaks     & 1,617 & 3,823 & 1,120 & 1,735 & 6,626 \\
 \botrule
 \end{tabular}}{Contigs over 150bp in length are aligned to the human reference
 genome GRCh37 with BWA-SW using option `-b33 -q50 -r17'. A type-1 break point
@@ -721,8 +721,7 @@ than short-read assemblies. It appears to yield more alignment break points, som
 of which may be caused by true structural variations not easily detectable with
 short reads. The quality of short-read assemblies varies in terms of contiguity,
 misassembly rate and redundancy between contigs, but overall, they are largely
-comparable to each other. The ABySS assembly may be further improved as it
-is not tuned for the input as much as others.
+comparable to each other.
 
 \subsection{Performance on SNP and INDEL calling}
 
