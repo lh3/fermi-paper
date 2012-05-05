@@ -703,14 +703,20 @@ reads from multiple long-insert libraries.
 
                      & ABySS & AllPaths-LG & fermi & SGA & HuRef \\
 \midrule
-Aligned contig bp    & 2.73G & 2.62G & 2.82G & 2.74G & 2.88G \\
-Aligned N50          & 9.0k  & 22.6k & 15.6k & 9.8k  & 81.4k \\
+%Aligned contig bp    & 2.73G & 2.62G & 2.82G & 2.74G & 2.88G \\
+%Aligned N50          & 9.0k  & 22.6k & 15.6k & 9.8k  & 81.4k \\
+%Covered ref. bp      & 2.69G & 2.59G & 2.74G & 2.70G & 2.78G \\
+%\# Type-1 breaks     & 5,856 &13,738 & 5,704 & 6,049 & 16,318 \\
+%\# Type-2 breaks     & 1,617 & 3,823 & 1,120 & 1,735 & 6,626 \\
+
+Aligned contig bp    & 2.73G & 2.60G & 2.81G & 2.74G & 2.81G \\
+Aligned N50          & 9.0k  & 23.8k & 15.8k & 9.9k  &103.0k \\
 Covered ref. bp      & 2.69G & 2.59G & 2.74G & 2.70G & 2.78G \\
-\# Type-1 breaks     & 5,856 &13,738 & 5,704 & 6,049 & 16,318 \\
-\# Type-2 breaks     & 1,617 & 3,823 & 1,120 & 1,735 & 6,626 \\
+\# Type-1 breaks     & 5,856 & 3,382 &   920 & 1,562 & 4,728 \\
+\# Type-2 breaks     & 1,617 & 3,314 &   897 & 1,534 & 4,503 \\
 \botrule
 \end{tabular}}{Contigs over 150bp in length are aligned to the human reference
-genome GRCh37 with BWA-SW using option `-b33 -q50 -r17'. A type-1 break point
+genome GRCh37 with BWA-SW using option `-b9 -q16 -r1 -w500'. A type-1 break point
 is detected if a contig is split during alignment and mapped to two distict
 locations, and at each location the alignment is longer than 500bp and the
 mapping quality is no less than 10. Type-2 break points exclude type-1 break
